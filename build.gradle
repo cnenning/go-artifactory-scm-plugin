@@ -1,0 +1,46 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+
+version = '0.1-SNAPSHOT'
+def goTargetVersion = '16.1'
+def goApiVersion = goTargetVersion + '.0'
+
+
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	compile 'cd.go.plugin:go-plugin-api:' + goApiVersion
+
+	compile 'commons-io:commons-io:2.5'
+	compile 'org.apache.httpcomponents:httpclient:4.5.2'
+	compile 'com.fasterxml.jackson.core:jackson-databind:2.8.3'
+	compile 'org.jsoup:jsoup:1.9.2'
+
+	testCompile 'junit:junit:4.12'
+	testCompile 'org.apache.cxf:cxf-rt-frontend-jaxrs:3.1.6'
+	testCompile 'org.apache.cxf:cxf-rt-transports-http-jetty:3.1.6'
+}
+
+
+import org.apache.tools.ant.filters.ReplaceTokens
+processResources {
+	filter ReplaceTokens, tokens: [
+		version: version,
+		goTargetVersion: goTargetVersion
+	]
+}
+
+
+jar {
+	into('lib') {
+		from configurations.compile.filter{!it.name.contains('go-plugin-api')}
+	}
+}
