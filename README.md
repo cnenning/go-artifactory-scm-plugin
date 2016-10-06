@@ -1,0 +1,1 @@
+# go-artifactory-scm-plugin
