@@ -11,3 +11,13 @@ When configuring a material inside go you should provide the URL up to `app/`.
 `${VERSION}` should be sub-directories which are treated as SCM revisions.
 
 On checkout all files in the `${VERSION}` sub-dir are downloaded.
+
+
+## Installation
+Place the [JAR file](releases) in directory `plugins/external` of your go-server. See [go documentation](https://docs.go.cd/current/extension_points/plugin_user_guide.html) for more detail.
+
+
+## Usage
+![screenshot of material config](https://cloud.githubusercontent.com/assets/15086255/20215868/9ac746dc-a817-11e6-986b-5964d8a2b8dd.png)
+
+After a pipeline has been created you can add an `Artifactory SCM` material.
