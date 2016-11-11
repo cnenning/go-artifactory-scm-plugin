@@ -14,7 +14,7 @@ On checkout all files in the `${VERSION}` sub-dir are downloaded.
 
 
 ## Installation
-Place the [JAR file](/cnenning/go-artifactory-scm-plugin/releases) in directory `plugins/external` of your go-server. See [go documentation](https://docs.go.cd/current/extension_points/plugin_user_guide.html) for more detail.
+Place the [JAR file](https://github.com/cnenning/go-artifactory-scm-plugin/releases) in directory `plugins/external` of your go-server. See [go documentation](https://docs.go.cd/current/extension_points/plugin_user_guide.html) for more detail.
 
 
 ## Usage
