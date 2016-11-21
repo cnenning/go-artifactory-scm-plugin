@@ -136,20 +136,17 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 
 		String url = urlFromConfig(config);
 		logger.debug("validating url: " + url);
-		if (url == null) {
+
+		List<String> validationMessages = doValidation(url);
+
+		for (String msg : validationMessages) {
 			Map<String, String> error = new HashMap<>();
 			error.put("key", "url");
-			error.put("message", "URL not specified");
-			valiErrors.add(error);
-		} else if (!(url.startsWith("http://") || url.startsWith("https://"))) {
-			Map<String, String> error = new HashMap<>();
-			error.put("key", "url");
-			error.put("message", "URL with unknown scheme");
+			error.put("message", msg);
 			valiErrors.add(error);
 		}
 
 		return valiErrors;
-
 	}
 
 	private Map<String, Object> handleCheckScmConnection(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -157,24 +154,48 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		String url = urlFromConfig(config);
 		logger.debug("checking connection to: " + url);
 		String status = "fail";
-		String message;
-		try {
-			boolean ok = new ArtifactoryClient().checkConnection(url, httpClient);
-			if (ok) {
-				status = "success";
-				message = "Successfully connected";
-			} else {
-				message = "could not find sub-dirs in provided url";
+		List<String> messages = new ArrayList<>();
+
+		// do validation first
+		List<String> validationErrors = doValidation(url);
+		if (!validationErrors.isEmpty()) {
+			for (String valiError : validationErrors) {
+				messages.add(valiError);
 			}
-		} catch (Exception e) {
-			logger.error("error while checking SCM connection", e);
-			message = e.toString();
+		} else {
+			// do connection check
+			String message;
+			try {
+				boolean ok = new ArtifactoryClient().checkConnection(url, httpClient);
+				if (ok) {
+					status = "success";
+					message = "Successfully connected";
+				} else {
+					message = "could not find sub-dirs in provided url";
+				}
+			} catch (Exception e) {
+				logger.error("error while checking SCM connection", e);
+				message = e.toString();
+			}
+			messages.add(message);
 		}
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("status", status);
-		map.put("messages", Arrays.asList(message));
+		map.put("messages", messages);
 		return map;
+	}
+
+	private List<String> doValidation(String url) {
+		List<String> valiErrors = new ArrayList<>();
+		if (url == null || url.isEmpty()) {
+			valiErrors.add("URL not specified");
+		} else if (!(url.startsWith("http://") || url.startsWith("https://"))) {
+			valiErrors.add("URL with unknown scheme");
+		} else if (!url.endsWith("/")) {
+			valiErrors.add("URL must end with a slash");
+		}
+		return valiErrors;
 	}
 
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {

@@ -117,7 +117,7 @@ public class IntegrationTests {
 
 		Assert.assertNotNull(response);
 		Assert.assertTrue(response.responseBody().contains("\"key\":\"url\""));
-		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL with unknown scheme\""));
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL not specified\""));
 	}
 
 	@Test
@@ -137,6 +137,25 @@ public class IntegrationTests {
 		Assert.assertNotNull(response);
 		Assert.assertTrue(response.responseBody().contains("\"key\":\"url\""));
 		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL with unknown scheme\""));
+	}
+
+	@Test
+	public void scmValidationUrlNoTrailingSlash() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"http://foo/bar\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-scm-configuration", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"key\":\"url\""));
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL must end with a slash\""));
 	}
 
 	@Test
