@@ -42,6 +42,11 @@ public class ArtifactoryClient {
 			targetDir.mkdirs();
 		}
 
+		// add trailing slash
+		if (!url.endsWith("/")) {
+			url += "/";
+		}
+
 		List<Revision> files = files(url, client);
 		for (Revision rev : files) {
 			String filename = escapeName(rev.revision);
@@ -241,6 +246,11 @@ public class ArtifactoryClient {
 			Date date = findDateInText(text);
 
 			if (since == null || date.getTime() > since.getTime()) {
+				// remove trailing slash
+				if (name.endsWith("/")) {
+					name = name.substring(0, name.length() - 1);
+				}
+
 				Revision rev = new Revision();
 				rev.revision = name;
 				rev.comment = name;

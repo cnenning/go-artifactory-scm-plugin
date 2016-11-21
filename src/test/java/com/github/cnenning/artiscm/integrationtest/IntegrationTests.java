@@ -1,10 +1,13 @@
 package com.github.cnenning.artiscm.integrationtest;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.junit.AfterClass;
@@ -64,6 +67,14 @@ public class IntegrationTests {
 		TMP_DIR.delete();
 		TMP_DIR.mkdir();
 		TMP_DIR.deleteOnExit();
+	}
+
+	@AfterClass
+	public static void cleanupTmpDir() throws Exception {
+		for (File file : TMP_DIR.listFiles()) {
+			file.delete();
+		}
+		TMP_DIR.delete();
 	}
 
 	protected GoPluginApiRequest createRequest(String name, String body) {
@@ -162,8 +173,8 @@ public class IntegrationTests {
 
 		Assert.assertNotNull(response);
 		Assert.assertTrue(response.responseBody().contains("\"revision\":{"));
-		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3/\""));
-		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3/\""));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3\""));
 		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T14:15:00.000Z\""));
 		Assert.assertTrue(response.responseBody().contains("\"modifiedFiles\":["));
 		Assert.assertTrue(response.responseBody().contains("\"fileName\":\"foo##1.2.3.txt\""));
@@ -194,12 +205,12 @@ public class IntegrationTests {
 		Assert.assertNotNull(response);
 		Assert.assertTrue(response.responseBody().contains("\"revisions\":["));
 
-		Assert.assertTrue(response.responseBody().contains("\"revision\":\"0.9.5/\""));
-		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"0.9.5/\""));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"0.9.5\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"0.9.5\""));
 		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-02T11:45:00.000Z\""));
 
-		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3/\""));
-		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3/\""));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3\""));
 		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T14:15:00.000Z\""));
 		Assert.assertTrue(response.responseBody().contains("\"modifiedFiles\":["));
 		Assert.assertTrue(response.responseBody().contains("\"fileName\":\"foo##1.2.3.txt\""));
@@ -220,7 +231,7 @@ public class IntegrationTests {
 				+ "},"
 				+ "\"destination-folder\": \"" + escapePath(TMP_DIR.getAbsolutePath()) + "\","
 				+ "\"revision\": {"
-					+ "\"revision\": \"1.2.3/\""
+					+ "\"revision\": \"1.2.3\""
 				+ "}"
 			+ "}"
 		;
@@ -237,6 +248,15 @@ public class IntegrationTests {
 		String[] files = TMP_DIR.list();
 		Assert.assertEquals(1, files.length);
 		Assert.assertEquals("foo##1.2.3.txt", files[0]);
+
+		InputStream fileInput = new FileInputStream(new File(TMP_DIR, files[0]));
+		try {
+			List<String> lines = IOUtils.readLines(fileInput, "UTF-8");
+			Assert.assertFalse(lines.isEmpty());
+			Assert.assertEquals("foobar", lines.get(0));
+		} finally {
+			fileInput.close();
+		}
 	}
 
 	protected String escapePath(String path) {
