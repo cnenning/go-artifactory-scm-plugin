@@ -109,9 +109,10 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 	}
 
 	private Map<String, Object> handleScmConfig() {
-		Map<String, String> map = new HashMap<>();
+		Map<String, Object> map = new HashMap<>();
 		map.put("display-name", "url");
 		map.put("default-value", "http://artifactory.company.com/repository/path-to/dir-with-versions");
+		map.put("part-of-identity", Boolean.FALSE);
 
 		Map<String, Object> wrapper = new HashMap<>();
 		wrapper.put("url", map);

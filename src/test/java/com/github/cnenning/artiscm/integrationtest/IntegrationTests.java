@@ -84,6 +84,23 @@ public class IntegrationTests {
 	}
 
 	@Test
+	public void scmConfig() throws Exception {
+		String requestJson =
+				"{}"
+		;
+		GoPluginApiRequest request = createRequest("scm-configuration", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("{\"url\":{"));
+		Assert.assertTrue(response.responseBody().contains("\"display-name\":\"url\""));
+		Assert.assertTrue(response.responseBody().contains("\"part-of-identity\":false"));
+	}
+
+
+	@Test
 	public void scmValidationOk() throws Exception {
 		String requestJson =
 				"{\"scm-configuration\": {"
