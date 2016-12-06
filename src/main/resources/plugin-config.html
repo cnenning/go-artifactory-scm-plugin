@@ -1,0 +1,20 @@
+<div class="form_item_block" title="See Apache HTTP Client docs.">
+	<label>Connect Timeout:</label>
+	<input type="text" ng-model="connectTimeout" />
+	<span class="form_error" ng-show="GOINPUTNAME[connectTimeout].$error.server">{{ GOINPUTNAME[connectTimeout].$error.server }}</span>
+</div>
+<div class="form_item_block" title="See Apache HTTP Client docs.">
+	<label>Socket Timeout:</label>
+	<input type="text" ng-model="socketTimeout" />
+	<span class="form_error" ng-show="GOINPUTNAME[socketTimeout].$error.server">{{ GOINPUTNAME[socketTimeout].$error.server }}</span>
+</div>
+<div class="form_item_block" title="See Apache HTTP Client docs.">
+	<label>Connection Request Timeout:</label>
+	<input type="text" ng-model="connectionRequestTimeout" />
+	<span class="form_error" ng-show="GOINPUTNAME[connectionRequestTimeout].$error.server">{{ GOINPUTNAME[connectionRequestTimeout].$error.server }}</span>
+</div>
+<div class="form_item_block" title="Proxy required to access Artifactory. String may contain scheme, host and port.">
+	<label>Proxy URL:</label>
+	<input type="text" ng-model="proxyUrl" />
+	<span class="form_error" ng-show="GOINPUTNAME[proxyUrl].$error.server">{{ GOINPUTNAME[proxyUrl].$error.server }}</span>
+</div>
