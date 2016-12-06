@@ -221,6 +221,33 @@ public class IntegrationTests {
 	}
 
 	@Test
+	public void latestRevisionTrailingSlashMissing() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL.substring(0, APP_URL.length() - 1) + "\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":{"));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T14:15:00.000Z\""));
+		Assert.assertTrue(response.responseBody().contains("\"modifiedFiles\":["));
+		Assert.assertTrue(response.responseBody().contains("\"fileName\":\"foo##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"action\":\"added\""));
+
+		Assert.assertFalse(response.responseBody().contains("0.5.1"));
+		Assert.assertFalse(response.responseBody().contains("0.9.5"));
+	}
+
+	@Test
 	public void latestRevisionsSince() throws Exception {
 		String requestJson =
 				"{\"scm-configuration\": {"

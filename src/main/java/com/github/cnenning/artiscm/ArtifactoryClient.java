@@ -92,6 +92,11 @@ public class ArtifactoryClient {
 	}
 
 	protected <T> T downloadHtml(String url, HttpClient client, Callback<T> callback) throws ClientProtocolException, IOException {
+		// add trailing slash
+		if (!url.endsWith("/")) {
+			url += "/";
+		}
+
 		HttpGet httpget = new HttpGet(url);
 		HttpResponse response = client.execute(httpget);
 		try {
