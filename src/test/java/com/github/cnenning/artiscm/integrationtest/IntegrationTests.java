@@ -234,9 +234,16 @@ public class IntegrationTests {
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
-		Assert.assertTrue(response.responseBody().contains("{\"url\":{"));
-		Assert.assertTrue(response.responseBody().contains("\"display-name\":\"url\""));
-		Assert.assertTrue(response.responseBody().contains("\"part-of-identity\":false"));
+
+		Map map = new ObjectMapper().readValue(response.responseBody(), Map.class);
+		Map urlMap = (Map) map.get("url");
+		Map dummyIdMap = (Map) map.get("dummy_id");
+
+		Assert.assertEquals("url", urlMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, urlMap.get("part-of-identity"));
+
+		Assert.assertEquals("dummy id", dummyIdMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, dummyIdMap.get("part-of-identity"));
 	}
 
 	@Test

@@ -277,13 +277,22 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 	}
 
 	private Map<String, Object> handleScmConfig() {
+		// url
 		Map<String, Object> map = new HashMap<>();
 		map.put("display-name", "url");
 		map.put("default-value", "http://artifactory.company.com/repository/path-to/dir-with-versions");
-		map.put("part-of-identity", Boolean.FALSE);
+		map.put("part-of-identity", Boolean.TRUE);
 
 		Map<String, Object> wrapper = new HashMap<>();
 		wrapper.put("url", map);
+
+		// dummy id
+		map = new HashMap<>();
+		map.put("display-name", "dummy id");
+		map.put("default-value", "");
+		map.put("part-of-identity", Boolean.TRUE);
+		wrapper.put("dummy_id", map);
+
 		return wrapper;
 	}
 
