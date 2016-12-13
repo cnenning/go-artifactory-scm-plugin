@@ -2,8 +2,10 @@ package com.github.cnenning.artiscm.integrationtest;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -455,16 +457,20 @@ public class IntegrationTests {
 		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
 
 		String[] files = TMP_DIR.list();
-		Assert.assertEquals(1, files.length);
+		Arrays.sort(files);
+		Assert.assertEquals(2, files.length);
 		Assert.assertEquals("foo##1.2.3.txt", files[0]);
+		Assert.assertEquals("foobar##1.2.3.txt", files[1]);
 
-		InputStream fileInput = new FileInputStream(new File(TMP_DIR, files[0]));
-		try {
+		assertFileContent(new File(TMP_DIR, files[0]), "foobar");
+		assertFileContent(new File(TMP_DIR, files[1]), "foobar foobar");
+	}
+
+	private void assertFileContent(File file, String content) throws IOException {
+		try (InputStream fileInput = new FileInputStream(file)){
 			List<String> lines = IOUtils.readLines(fileInput, "UTF-8");
 			Assert.assertFalse(lines.isEmpty());
-			Assert.assertEquals("foobar", lines.get(0));
-		} finally {
-			fileInput.close();
+			Assert.assertEquals(content, lines.get(0));
 		}
 	}
 
