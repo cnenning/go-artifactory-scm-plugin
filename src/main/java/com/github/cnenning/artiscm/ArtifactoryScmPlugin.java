@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -286,6 +287,13 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		Map<String, Object> wrapper = new HashMap<>();
 		wrapper.put("url", map);
 
+		// pattern
+		map = new HashMap<>();
+		map.put("display-name", "pattern");
+		map.put("default-value", "");
+		map.put("part-of-identity", Boolean.TRUE);
+		wrapper.put("pattern", map);
+
 		// dummy id
 		map = new HashMap<>();
 		map.put("display-name", "dummy id");
@@ -312,30 +320,38 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
 		List<Object> valiErrors = new ArrayList<>();
 
-		String url = urlFromConfig(config);
+		String url = configValue(config, "url");
+		String pattern = configValue(config, "pattern");
 		logger.debug("validating url: " + url);
+		logger.debug("validating pattern: " + pattern);
 
-		List<String> validationMessages = doScmValidation(url);
+		List<String> validationMessagesUrl = validateUrl(url);
+		List<String> validationMessagesPattern = validatePattern(pattern);
 
-		for (String msg : validationMessages) {
-			Map<String, String> error = new HashMap<>();
-			error.put("key", "url");
-			error.put("message", msg);
-			valiErrors.add(error);
-		}
+		addValidationErrors(valiErrors, "url", validationMessagesUrl);
+		addValidationErrors(valiErrors, "pattern", validationMessagesPattern);
 
 		return valiErrors;
 	}
 
+	private void addValidationErrors(List<Object> listOfMaps, String key, List<String> errors) {
+		for (String msg : errors) {
+			Map<String, String> error = new HashMap<>();
+			error.put("key", key);
+			error.put("message", msg);
+			listOfMaps.add(error);
+		}
+	}
+
 	private Map<String, Object> handleCheckScmConnection(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
-		String url = urlFromConfig(config);
+		String url = configValue(config, "url");
 		logger.debug("checking connection to: " + url);
 		String status = "fail";
 		List<String> messages = new ArrayList<>();
 
 		// do validation first
-		List<String> validationErrors = doScmValidation(url);
+		List<String> validationErrors = validateUrl(url);
 		if (!validationErrors.isEmpty()) {
 			for (String valiError : validationErrors) {
 				messages.add(valiError);
@@ -364,7 +380,7 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		return map;
 	}
 
-	private List<String> doScmValidation(String url) {
+	private List<String> validateUrl(String url) {
 		List<String> valiErrors = new ArrayList<>();
 		if (url == null || url.isEmpty()) {
 			valiErrors.add("URL not specified");
@@ -376,9 +392,21 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		return valiErrors;
 	}
 
+	private List<String> validatePattern(String patternStr) {
+		List<String> valiErrors = new ArrayList<>();
+		if (patternStr != null && !patternStr.isEmpty()) {
+			try {
+				Pattern.compile(patternStr);
+			} catch (Exception e) {
+				valiErrors.add(e.toString());
+			}
+		}
+		return valiErrors;
+	}
+
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
-		String url = urlFromConfig(config);
+		String url = configValue(config, "url");
 		logger.debug("obtaining latest revision of: " + url);
 		Revision revision = new ArtifactoryClient().latestRevision(url, httpClient);
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
@@ -390,7 +418,7 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 
 	private Map<String, Object> handleLatestRevisionsSince(String inputJson) throws JsonParseException, JsonMappingException, IOException, ParseException {
 		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
-		String url = urlFromConfig(apiInput);
+		String url = configValue(apiInput, "url");
 		Date since = dateFromApiInput(apiInput);
 		logger.debug("obtaining latest revisions since '" + since + "' of: " + url);
 		List<Revision> revisions = new ArtifactoryClient().latestRevisionsSince(url, httpClient, since);
@@ -407,13 +435,14 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 
 	private Map<String, Object> handleCheckout(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
-		String url = urlFromConfig(apiInput);
+		String url = configValue(apiInput, "url");
+		String pattern = configValue(apiInput, "pattern");
 		String targetDir = targetDirFromApiInput(apiInput);
 		String rev = revisonFromApiInput(apiInput);
 		logger.debug("checking out, rev: '" + rev + "' from: " + url);
 
 		url = url + rev;
-		new ArtifactoryClient().downloadFiles(url, httpClient, targetDir);
+		new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("status", "success");
@@ -447,10 +476,12 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 		return response;
 	}
 
-	private String urlFromConfig(Map config) {
+	private String configValue(Map config, String key) {
 		Map keysMap = (Map)config.get("scm-configuration");
-		Map urlMap = (Map)keysMap.get("url");
-		return (String)urlMap.get("value");
+		Map innerMap = (Map)keysMap.get(key);
+		return innerMap != null
+				? (String)innerMap.get("value")
+				: null;
 	}
 
 	private Date dateFromApiInput(Map input) throws ParseException {

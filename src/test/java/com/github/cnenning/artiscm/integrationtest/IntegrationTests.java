@@ -13,8 +13,10 @@ import java.util.Random;
 import org.apache.commons.io.IOUtils;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -69,16 +71,16 @@ public class IntegrationTests {
 		server.destroy();
 	}
 
-	@BeforeClass
-	public static void setupTmpDir() throws Exception {
+	@Before
+	public void setupTmpDir() throws Exception {
 		TMP_DIR = File.createTempFile("test", Long.toString(System.nanoTime()));
 		TMP_DIR.delete();
 		TMP_DIR.mkdir();
 		TMP_DIR.deleteOnExit();
 	}
 
-	@AfterClass
-	public static void cleanupTmpDir() throws Exception {
+	@After
+	public void cleanupTmpDir() throws Exception {
 		for (File file : TMP_DIR.listFiles()) {
 			file.delete();
 		}
@@ -226,6 +228,19 @@ public class IntegrationTests {
 	}
 
 	@Test
+	public void settingsView() throws Exception {
+		String requestJson ="{}";
+		GoPluginApiRequest request = createRequest("go.plugin-settings.get-view", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("{\"template\":\"<div class"));
+		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[connectTimeout].$error.server"));
+	}
+
+	@Test
 	public void scmConfig() throws Exception {
 		String requestJson =
 				"{}"
@@ -239,13 +254,32 @@ public class IntegrationTests {
 
 		Map map = new ObjectMapper().readValue(response.responseBody(), Map.class);
 		Map urlMap = (Map) map.get("url");
+		Map patternMap = (Map) map.get("pattern");
 		Map dummyIdMap = (Map) map.get("dummy_id");
 
 		Assert.assertEquals("url", urlMap.get("display-name"));
 		Assert.assertEquals(Boolean.TRUE, urlMap.get("part-of-identity"));
 
+		Assert.assertEquals("pattern", patternMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, dummyIdMap.get("part-of-identity"));
+
 		Assert.assertEquals("dummy id", dummyIdMap.get("display-name"));
 		Assert.assertEquals(Boolean.TRUE, dummyIdMap.get("part-of-identity"));
+	}
+
+	@Test
+	public void scmConfigView() throws Exception {
+		String requestJson ="{}";
+		GoPluginApiRequest request = createRequest("scm-view", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("{\"template\":\"<div class"));
+		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[url].$error.server"));
+		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[pattern].$error.server"));
+		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[dummy_id].$error.server"));
 	}
 
 	@Test
@@ -254,6 +288,9 @@ public class IntegrationTests {
 				"{\"scm-configuration\": {"
 						+ "\"url\": {"
 						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"pattern\": {"
+						+ "\"value\": \"abc\""
 						+ "}"
 				+ "}}"
 		;
@@ -322,6 +359,26 @@ public class IntegrationTests {
 		Assert.assertTrue(response.responseBody().contains("\"key\":\"url\""));
 		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL must end with a slash\""));
 	}
+
+	@Test
+	public void scmValidationInvalidPattern() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"pattern\": {"
+						+ "\"value\": \"(\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-scm-configuration", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"key\":\"pattern\""));
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"java.util.regex.PatternSyntaxException: Unclosed group near index 1"));
+	}
+
 
 	@Test
 	public void checkScmConnection() throws Exception {
@@ -472,6 +529,43 @@ public class IntegrationTests {
 			Assert.assertFalse(lines.isEmpty());
 			Assert.assertEquals(content, lines.get(0));
 		}
+	}
+
+	@Test
+	public void checkoutPattern() throws Exception {
+		Assert.assertEquals(0, TMP_DIR.list().length);
+
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"pattern\": {"
+						+ "\"value\": \"foob.*\""
+						+ "}"
+				+ "},"
+				+ "\"destination-folder\": \"" + escapePath(TMP_DIR.getAbsolutePath()) + "\","
+				+ "\"revision\": {"
+					+ "\"revision\": \"1.2.3\""
+				+ "}"
+			+ "}"
+		;
+		GoPluginApiRequest request = createRequest("checkout", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		System.out.println("got response body:");
+		System.out.println(response.responseBody());
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+
+		String[] files = TMP_DIR.list();
+		Arrays.sort(files);
+		Assert.assertEquals(1, files.length);
+		Assert.assertEquals("foobar##1.2.3.txt", files[0]);
+
+		assertFileContent(new File(TMP_DIR, files[0]), "foobar foobar");
 	}
 
 	protected String escapePath(String path) {

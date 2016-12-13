@@ -16,6 +16,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -33,7 +35,7 @@ import org.jsoup.select.Elements;
 
 public class ArtifactoryClient {
 
-	public void downloadFiles(String url, HttpClient client, String targetDirPath) throws ClientProtocolException, IOException {
+	public void downloadFiles(String url, HttpClient client, String targetDirPath, String patternStr) throws ClientProtocolException, IOException {
 		// create target dir
 		File targetDir = new File(targetDirPath);
 		if (!targetDir.exists()) {
@@ -47,9 +49,22 @@ public class ArtifactoryClient {
 			url += "/";
 		}
 
+		Pattern pattern = null;
+		if (patternStr != null && !patternStr.isEmpty()) {
+			pattern = Pattern.compile(patternStr);
+		}
+
 		List<Revision> files = files(url, client);
 		for (Revision rev : files) {
-			String filename = escapeName(rev.revision);
+			String filename = rev.revision;
+			if (pattern != null) {
+				Matcher matcher = pattern.matcher(filename);
+				if (!matcher.matches()) {
+					continue;
+				}
+			}
+
+			filename = escapeName(filename);
 			String completeUrl = url + filename;
 
 			// print to sys out to see it in go-console-view
