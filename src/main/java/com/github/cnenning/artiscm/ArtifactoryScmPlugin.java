@@ -297,7 +297,7 @@ public class ArtifactoryScmPlugin implements GoPlugin {
 	}
 
 	private Map<String, String> handleScmView() throws IOException {
-		InputStream inputStream = getClass().getResourceAsStream("/config.html");
+		InputStream inputStream = getClass().getResourceAsStream("/scm-config.html");
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		IOUtils.copy(inputStream, baos);
 		String view = baos.toString();
