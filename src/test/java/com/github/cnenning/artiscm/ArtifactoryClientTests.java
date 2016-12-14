@@ -1,5 +1,7 @@
 package com.github.cnenning.artiscm;
 
+import java.util.Date;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.message.BasicHttpResponse;
@@ -81,10 +83,22 @@ public class ArtifactoryClientTests {
 		Assert.assertFalse(File);
 	}
 
-
 	@Test
 	public void isFileHash() {
 		boolean File = new ArtifactoryClient().isFile("foo.md5");
 		Assert.assertFalse(File);
+	}
+
+	@Test
+	public void findDateInText() {
+		//Date date = new ArtifactoryClient().findDateInText("01-Jan-2016 09:30", "");
+		Date date = new ArtifactoryClient().findDateInText("16-Nov-2016 01:40 4.88 MB", "");
+		Assert.assertTrue(date.getTime() > 0);
+	}
+
+	@Test
+	public void findDateInTextInvalid() {
+		Date date = new ArtifactoryClient().findDateInText("invalid", "");
+		Assert.assertEquals(0, date.getTime());
 	}
 }

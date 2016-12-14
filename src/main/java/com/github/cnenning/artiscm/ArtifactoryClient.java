@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,14 +32,17 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
+import com.thoughtworks.go.plugin.api.logging.Logger;
+
 public class ArtifactoryClient {
+
+	protected Logger logger = Logger.getLoggerFor(getClass());
 
 	public void downloadFiles(String url, HttpClient client, String targetDirPath, String patternStr) throws ClientProtocolException, IOException {
 		// create target dir
 		File targetDir = new File(targetDirPath);
 		if (!targetDir.exists()) {
-			System.out.print("creating target dir: ");
-			System.out.println(targetDirPath);
+			logger.info("creating target dir: " + targetDirPath);
 			targetDir.mkdirs();
 		}
 
@@ -67,9 +69,7 @@ public class ArtifactoryClient {
 			filename = escapeName(filename);
 			String completeUrl = url + filename;
 
-			// print to sys out to see it in go-console-view
-			System.out.print("downloading ");
-			System.out.println(completeUrl);
+			logger.info("downloading " + completeUrl);
 
 			HttpGet httpget = new HttpGet(completeUrl);
 			HttpResponse response = client.execute(httpget);
@@ -212,7 +212,7 @@ public class ArtifactoryClient {
 		for (Element link : links) {
 			String href = link.attr("href");
 			if (isDir(href)) {
-				Revision rev = elementToRev(link, since);
+				Revision rev = elementToRev(link, since, url);
 				if (rev != null) {
 					revisions.add(rev);
 					if (since != null) {
@@ -251,7 +251,7 @@ public class ArtifactoryClient {
 				for (Element link : links) {
 					String href = link.attr("href");
 					if (isFile(href)) {
-						Revision rev = elementToRev(link, null);
+						Revision rev = elementToRev(link, null, url);
 						if (rev != null) {
 							revisions.add(rev);
 						}
@@ -290,13 +290,13 @@ public class ArtifactoryClient {
 		return latest;
 	}
 
-	protected Revision elementToRev(Element link, Date since) {
+	protected Revision elementToRev(Element link, Date since, String url) {
 		String name = link.text();
 		Node nextSibling = link.nextSibling();
 		if (nextSibling instanceof TextNode) {
 			TextNode textNode = (TextNode) nextSibling;
 			String text = textNode.text();
-			Date date = findDateInText(text);
+			Date date = findDateInText(text, url);
 
 			if (since == null || date.getTime() > since.getTime()) {
 				// remove trailing slash
@@ -316,17 +316,15 @@ public class ArtifactoryClient {
 
 	public static final DateFormat HTML_DATE_FORMAT = new SimpleDateFormat("dd-MMM-yyyy HH:mm");
 
-	protected Date findDateInText(String text) {
+	protected Date findDateInText(String text, String url) {
 		if (text != null) {
 			text = text.trim();
 			// note: text contains more than just date which is OK for this java api
-			try
-			{
+			try {
 				return HTML_DATE_FORMAT.parse(text);
-			}
-			catch (ParseException e)
-			{
-				// we could log this, but never mind
+			} catch (Exception e) {
+				logger.warn("could not parse date: '" + text + "', url: " + url);
+				logger.debug(e.getMessage(), e);
 			}
 		}
 		return new Date(0);
