@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 
 
-version = '0.6'
+version = '0.7-SNAPSHOT'
 def goTargetVersion = '16.1'
 def goApiVersion = goTargetVersion + '.0'
 
