@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<go-plugin id="artifactory-pkg" version="1">
+<about>
+    <name>Artifactory Package Material Plugin</name>
+    <version>@version@</version>
+    <target-go-version>@goTargetVersion@</target-go-version>
+    <description>Able to download files as packages from Artifactory repository</description>
+    <vendor>
+        <name>Christoph Nenning</name>
+        <url>https://github.com/cnenning/go-artifactory-scm-plugin/README.md</url>
+    </vendor>
+</about>
+</go-plugin>

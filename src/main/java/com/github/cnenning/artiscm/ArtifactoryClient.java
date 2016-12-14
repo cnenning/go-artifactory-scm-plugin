@@ -95,7 +95,7 @@ public class ArtifactoryClient {
 		}
 	}
 
-	public boolean checkConnection(String url, HttpClient client) throws ClientProtocolException, IOException {
+	public boolean checkSubDirs(String url, HttpClient client) throws ClientProtocolException, IOException {
 		Boolean ok = downloadHtml(url, client, new Callback<Boolean>() {
 			@Override
 			public Boolean callback(String url, HttpClient client, Document document)
@@ -104,6 +104,11 @@ public class ArtifactoryClient {
 			}
 		});
 		return ok.booleanValue();
+	}
+
+	public String checkFiles(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
+		Revision latest = latestFileMatching(url, patternStr, client);
+		return latest != null ? latest.revision : null;
 	}
 
 	protected <T> T downloadHtml(String url, HttpClient client, Callback<T> callback) throws ClientProtocolException, IOException {
@@ -180,7 +185,7 @@ public class ArtifactoryClient {
 		return false;
 	}
 
-	public Revision latestRevision(String url, HttpClient client) throws ClientProtocolException, IOException {
+	public Revision latestRevision(final String url, final HttpClient client) throws ClientProtocolException, IOException {
 		return downloadHtml(url, client, new Callback<Revision>(){
 			@Override
 			public Revision callback(String url, HttpClient client, Document document) throws IOException
@@ -191,7 +196,7 @@ public class ArtifactoryClient {
 		});
 	}
 
-	public List<Revision> latestRevisionsSince(String url, HttpClient client, final Date since) throws ClientProtocolException, IOException {
+	public List<Revision> latestRevisionsSince(final String url, final HttpClient client, final Date since) throws ClientProtocolException, IOException {
 		return downloadHtml(url, client, new Callback<List<Revision>>(){
 			@Override
 			public List<Revision> callback(String url, HttpClient client, Document document) throws IOException
@@ -257,6 +262,34 @@ public class ArtifactoryClient {
 		});
 	}
 
+	public Revision latestFileMatching(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
+		if (patternStr == null || patternStr.isEmpty()) {
+			return null;
+		}
+
+		Revision latest = null;
+		Pattern pattern = Pattern.compile(patternStr);
+		List<Revision> files = files(url, client);
+		for (Revision rev : files) {
+			String filename = rev.revision;
+			Matcher matcher = pattern.matcher(filename);
+			if (!matcher.matches()) {
+				continue;
+			}
+			if (latest == null || latest.timestamp.compareTo(rev.timestamp) < 0) {
+				latest = rev;
+				int groupCount = matcher.groupCount();
+				List<String> groups = new ArrayList<>(groupCount);
+				for (int i=0; i<groupCount; i++) {
+					String group = matcher.group(i);
+					groups.add(group);
+				}
+				latest.matchingGroups = groups;
+			}
+		}
+		return latest;
+	}
+
 	protected Revision elementToRev(Element link, Date since) {
 		String name = link.text();
 		Node nextSibling = link.nextSibling();
@@ -304,6 +337,7 @@ public class ArtifactoryClient {
 		Date timestamp;
 		String comment;
 		List<String> files;
+		List<String> matchingGroups;
 	}
 
 	protected static interface Callback<T> {

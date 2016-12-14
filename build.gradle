@@ -43,4 +43,23 @@ jar {
 	into('lib') {
 		from configurations.compile.filter{!it.name.contains('go-plugin-api')}
 	}
+	exclude 'plugin-pkg.xml'
+	exclude '**/ArtifactoryPkgPlugin*'
 }
+
+task(pkgPluginJar, type: Jar) {
+	baseName 'go-artifactory-pkg-plugin'
+
+	from sourceSets.main.output.resourcesDir
+	from sourceSets.main.output.classesDir
+
+	into('lib') {
+		from configurations.compile.filter{!it.name.contains('go-plugin-api')}
+	}
+	exclude 'plugin.xml'
+	exclude 'scm-config.html'
+	exclude '**/ArtifactoryScmPlugin*'
+	rename('plugin-pkg.xml', 'plugin.xml')	
+}
+
+assemble.dependsOn pkgPluginJar

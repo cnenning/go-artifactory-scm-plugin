@@ -21,6 +21,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.cnenning.artiscm.ArtifactoryPkgPlugin;
 import com.github.cnenning.artiscm.ArtifactoryScmPlugin;
 import com.thoughtworks.go.plugin.api.GoApplicationAccessor;
 import com.thoughtworks.go.plugin.api.request.DefaultGoPluginApiRequest;
@@ -87,8 +88,21 @@ public class IntegrationTests {
 		TMP_DIR.delete();
 	}
 
-	protected ArtifactoryScmPlugin createPlugin() {
+	protected ArtifactoryScmPlugin createPluginScm() {
 		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		plugin.initializeGoApplicationAccessor(new GoApplicationAccessor(){
+			
+			@Override
+			public GoApiResponse submit(GoApiRequest request)
+			{
+				return new DefaultGoApiResponse(200);
+			}
+		});
+		return plugin;
+	}
+
+	protected ArtifactoryPkgPlugin createPluginPkg() {
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
 		plugin.initializeGoApplicationAccessor(new GoApplicationAccessor(){
 			
 			@Override
@@ -260,7 +274,7 @@ public class IntegrationTests {
 		Assert.assertEquals("url", urlMap.get("display-name"));
 		Assert.assertEquals(Boolean.TRUE, urlMap.get("part-of-identity"));
 
-		Assert.assertEquals("pattern", patternMap.get("display-name"));
+		Assert.assertEquals("filename regex", patternMap.get("display-name"));
 		Assert.assertEquals(Boolean.TRUE, dummyIdMap.get("part-of-identity"));
 
 		Assert.assertEquals("dummy id", dummyIdMap.get("display-name"));
@@ -379,7 +393,6 @@ public class IntegrationTests {
 		Assert.assertTrue(response.responseBody().contains("\"message\":\"java.util.regex.PatternSyntaxException: Unclosed group near index 1"));
 	}
 
-
 	@Test
 	public void checkScmConnection() throws Exception {
 		String requestJson =
@@ -391,7 +404,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("check-scm-connection", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -409,7 +422,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -436,7 +449,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -467,7 +480,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("latest-revisions-since", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -505,7 +518,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("checkout", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -552,7 +565,7 @@ public class IntegrationTests {
 		;
 		GoPluginApiRequest request = createRequest("checkout", requestJson);
 
-		ArtifactoryScmPlugin plugin = createPlugin();
+		ArtifactoryScmPlugin plugin = createPluginScm();
 		GoPluginApiResponse response = plugin.handle(request);
 
 		Assert.assertNotNull(response);
@@ -570,5 +583,300 @@ public class IntegrationTests {
 
 	protected String escapePath(String path) {
 		return path.replaceAll("\\\\", "\\\\\\\\");
+	}
+
+	@Test
+	public void pkgRepoConfig() throws Exception {
+		String requestJson =
+				"{}"
+		;
+		GoPluginApiRequest request = createRequest("repository-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+
+		Map map = new ObjectMapper().readValue(response.responseBody(), Map.class);
+		Map urlMap = (Map) map.get("base_url");
+
+		Assert.assertEquals("Base URL", urlMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, urlMap.get("part-of-identity"));
+	}
+
+	@Test
+	public void pkgPkgConfig() throws Exception {
+		String requestJson =
+				"{}"
+		;
+		GoPluginApiRequest request = createRequest("package-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+
+		Map map = new ObjectMapper().readValue(response.responseBody(), Map.class);
+		Map pathMap = (Map) map.get("path");
+		Map patternMap = (Map) map.get("pattern");
+
+		Assert.assertEquals("path", pathMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, pathMap.get("part-of-identity"));
+
+		Assert.assertEquals("filename regex", patternMap.get("display-name"));
+		Assert.assertEquals(Boolean.TRUE, patternMap.get("part-of-identity"));
+	}
+
+	@Test
+	public void pkgRepoValidationOk() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-repository-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().equals("[]"));
+	}
+
+	@Test
+	public void pkgRepoValidationUrlMissing() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-repository-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"key\":\"base_url\""));
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"URL not specified\""));
+	}
+
+	@Test
+	public void pkgPkgValidationOk() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"abc/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"xyz\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-package-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().equals("[]"));
+	}
+
+	@Test
+	public void pkgPkgValidationPathNoTrailingSlash() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"abc\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"xyz\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-package-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"path must end with a slash\""));
+	}
+
+	@Test
+	public void pkgPkgValidationPatternMissing() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"abc/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("validate-package-configuration", requestJson);
+
+		ArtifactoryPkgPlugin plugin = new ArtifactoryPkgPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"pattern is required\""));
+	}
+
+	@Test
+	public void pkgCheckRepoConnection() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("check-repository-connection", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+	}
+
+	@Test
+	public void pkgCheckPkgConnection() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"versions/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"foo.*\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("check-package-connection", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+	}
+
+	@Test
+	public void pkgLatestRevision() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"versions/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"foo.*\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T10:20:00.000Z\""));
+
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME_ENCODED\":\"foobar%23%231.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION\":\"" + APP_URL + "versions/" + "foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION_ENCODED\":\"" + APP_URL + "versions/" + "foobar%23%231.2.3.txt\""));
+
+		Assert.assertFalse(response.responseBody().contains("foo##1.2.3.txt"));
+	}
+
+	@Test
+	public void pkgLatestRevisionSince() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"versions/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"foo.*\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision-since", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T10:20:00.000Z\""));
+
+		Assert.assertFalse(response.responseBody().contains("foo##1.2.3.txt"));
+	}
+
+	@Test
+	public void pkgLatestRevisionGroups() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"versions/\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \"(foo.*##)(.*)(\\\\.txt)\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T10:20:00.000Z\""));
+
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME\":\"foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME_ENCODED\":\"foobar%23%231.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION\":\"" + APP_URL + "versions/" + "foobar##1.2.3.txt\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION_ENCODED\":\"" + APP_URL + "versions/" + "foobar%23%231.2.3.txt\""));
+
+		Assert.assertTrue(response.responseBody().contains("\"MATCHING_GROUP_2\":\"1.2.3\""));
+
+		Assert.assertFalse(response.responseBody().contains("foo##1.2.3.txt"));
 	}
 }
