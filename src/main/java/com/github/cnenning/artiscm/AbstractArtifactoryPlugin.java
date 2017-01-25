@@ -10,9 +10,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.events.Attribute;
+import javax.xml.stream.events.StartElement;
+import javax.xml.stream.events.XMLEvent;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
@@ -95,6 +102,7 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		}
 
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+		clientBuilder.setUserAgent(buildUserAgent());
 		clientBuilder.setDefaultRequestConfig(requestConfigBuilder.build());
 		return clientBuilder.build();
 	}
@@ -107,6 +115,51 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 			// ignore
 		}
 		return timeout;
+	}
+
+	protected String buildUserAgent() {
+		String[] pluginInfo = readInfoFromPluginXml();
+		String pluginId = pluginInfo[0];
+		String pluginVersion = pluginInfo[1];
+		String userAgent = "go-plugin " + (pluginId != null ? pluginId : getClass().getName()) 
+				+ " " + (pluginVersion != null ? pluginVersion : "unknown version");
+		return userAgent;
+	}
+
+	private String[] readInfoFromPluginXml() {
+		String pluginId = null;
+		String pluginVersion = null;
+		try
+		{
+			InputStream xmlStream = getClass().getResourceAsStream("/plugin.xml");
+			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+			XMLEventReader eventReader = inputFactory.createXMLEventReader(xmlStream);
+			while (eventReader.hasNext()) {
+				XMLEvent event = eventReader.nextEvent();
+				if (event.isStartElement()) {
+					StartElement element = event.asStartElement();
+					String name = element.getName().getLocalPart();
+					if ("go-plugin".equals(name)) {
+						Iterator attributes = element.getAttributes();
+						while (attributes.hasNext()) {
+							Attribute attribute = (Attribute)attributes.next();
+							if ("id".equals(attribute.getName().getLocalPart())) {
+								pluginId = attribute.getValue();
+								break;
+							}
+						}
+					} else if ("version".equals(name)) {
+						event = eventReader.nextEvent();
+						pluginVersion = event.asCharacters().getData();
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			logger.error("could not read plugin.xml", e);
+		}
+		return new String[]{pluginId, pluginVersion};
 	}
 
 	@Override
