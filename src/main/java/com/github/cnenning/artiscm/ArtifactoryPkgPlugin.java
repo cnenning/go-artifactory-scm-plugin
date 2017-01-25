@@ -99,6 +99,15 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		map.put("required", Boolean.TRUE);
 		wrapper.put("pattern", map);
 
+		map = new HashMap<>();
+		map.put("display-name", "is directory");
+		map.put("default-value", "false");
+		map.put("display-order", "2");
+		map.put("part-of-identity", Boolean.FALSE);
+		map.put("secure", Boolean.FALSE);
+		map.put("required", Boolean.FALSE);
+		wrapper.put("isDir", map);
+
 		return wrapper;
 	}
 
@@ -145,7 +154,8 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		String baseUrl = configValueRepo(config, "base_url");
 		String path = configValuePkg(config, "path");
 		String pattern = configValuePkg(config, "pattern");
-		return checkConnection(baseUrl + path, pattern);
+		boolean isDirectory = isDirectory(config);
+		return checkConnection(baseUrl + path, pattern, isDirectory);
 	}
 
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -154,9 +164,10 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		String path = configValuePkg(config, "path");
 		String pattern = configValuePkg(config, "pattern");
 		String url = baseUrl + path;
+		boolean isDirectory = isDirectory(config);
 		logger.debug("obtaining latest revision of: " + url);
 		ArtifactoryClient artifactoryClient = new ArtifactoryClient();
-		Revision revision = artifactoryClient.latestFileMatching(url, pattern, httpClient);
+		Revision revision = artifactoryClient.latestChildMatching(url, pattern, isDirectory, httpClient);
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
 
 		Map<String, String> dataMap = new HashMap<>();
@@ -207,6 +218,11 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 
 	protected String configValuePkg(Map config, String key) {
 		return configValue(config, "package-configuration", key);
+	}
+
+	protected boolean isDirectory(Map config) {
+		String isDirStr = configValuePkg(config, "isDir");
+		return "true".equals(isDirStr) || "TRUE".equals(isDirStr) || "1".equals(isDirStr);
 	}
 
 	protected String prevRevisonTimestampFromApiInput(Map input) {

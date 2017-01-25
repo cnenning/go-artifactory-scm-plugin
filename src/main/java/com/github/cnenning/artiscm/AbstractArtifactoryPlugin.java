@@ -350,7 +350,10 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		return map;
 	}
 
-	protected Map<String, Object> checkConnection(String url, String filenamePattern) {
+	protected Map<String, Object> checkConnection(String url, String pattern) {
+		return checkConnection(url, pattern, true);
+	}
+	protected Map<String, Object> checkConnection(String url, String pattern, boolean directory) {
 		logger.debug("checking connection to: " + url);
 		String status = "fail";
 		List<String> messages = new ArrayList<>();
@@ -365,20 +368,19 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 			// do connection check
 			String message;
 			try {
-				boolean ok;
+				String foundChild;
 				String msgOk;
 				String msgFail;
-				if (filenamePattern != null) {
-					String filename = new ArtifactoryClient().checkFiles(url, filenamePattern, httpClient);
-					ok = filename != null;
-					msgOk = "Successfully found file " + filename;
+				if (!directory) {
+					foundChild = new ArtifactoryClient().checkFiles(url, pattern, httpClient);
+					msgOk = "Successfully found file " + foundChild;
 					msgFail = "could not find files matching pattern";
 				} else {
-					ok = new ArtifactoryClient().checkSubDirs(url, httpClient);
-					msgOk = "Successfully connected";
+					foundChild = new ArtifactoryClient().checkSubDirs(url, pattern, httpClient);
+					msgOk = "Successfully found directory " + foundChild;
 					msgFail = "could not find sub-dirs in provided url";
 				}
-				if (ok) {
+				if (foundChild != null) {
 					status = "success";
 					message = msgOk;
 				} else {

@@ -95,19 +95,19 @@ public class ArtifactoryClient {
 		}
 	}
 
-	public boolean checkSubDirs(String url, HttpClient client) throws ClientProtocolException, IOException {
-		Boolean ok = downloadHtml(url, client, new Callback<Boolean>() {
+	public String checkSubDirs(final String url, final String pattern, final HttpClient client) throws ClientProtocolException, IOException {
+		String dirName = downloadHtml(url, client, new Callback<String>() {
 			@Override
-			public Boolean callback(String url, HttpClient client, Document document)
+			public String callback(String url, HttpClient client, Document document)
 			{
-				return Boolean.valueOf(containsSubDir(document));
+				return containsSubDir(document, pattern);
 			}
 		});
-		return ok.booleanValue();
+		return dirName;
 	}
 
 	public String checkFiles(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
-		Revision latest = latestFileMatching(url, patternStr, client);
+		Revision latest = latestChildMatching(url, patternStr, false, client);
 		return latest != null ? latest.revision : null;
 	}
 
@@ -174,15 +174,29 @@ public class ArtifactoryClient {
 		return false;
 	}
 
-	protected boolean containsSubDir(Document document) {
+	protected String containsSubDir(Document document, String patternStr) {
+		Pattern pattern = null;
+		if (patternStr != null && !patternStr.isEmpty()) {
+			pattern = Pattern.compile(patternStr);
+		}
 		Elements links = document.select("a");
 		for (Element link : links) {
 			String href = link.attr("href");
-			if (isDir(href)) {
-				return true;
+			if (isDir(href) && dirMatchesPattern(href, pattern)) {
+				return href;
 			}
 		}
-		return false;
+		return null;
+	}
+
+	protected boolean dirMatchesPattern(String dir, Pattern pattern) {
+		if (pattern != null) {
+			if (dir.endsWith("/")) {
+				dir = dir.substring(0, dir.length() - 1);
+			}
+			return pattern.matcher(dir).matches();
+		}
+		return true;
 	}
 
 	public Revision latestRevision(final String url, final HttpClient client) throws ClientProtocolException, IOException {
@@ -242,6 +256,10 @@ public class ArtifactoryClient {
 	}
 
 	protected List<Revision> files(String url, HttpClient client) throws ClientProtocolException, IOException {
+		return children(url, false, client);
+	}
+
+	protected List<Revision> children(final String url, final boolean directories, final HttpClient client) throws ClientProtocolException, IOException {
 		return downloadHtml(url, client, new Callback<List<Revision>>() {
 			@Override
 			public List<Revision> callback(String url, HttpClient client, Document document)
@@ -250,7 +268,10 @@ public class ArtifactoryClient {
 				Elements links = document.select("a");
 				for (Element link : links) {
 					String href = link.attr("href");
-					if (isFile(href)) {
+					boolean isCorrectType = directories
+						? isDir(href)
+						: isFile(href);
+					if (isCorrectType) {
 						Revision rev = elementToRev(link, null, url);
 						if (rev != null) {
 							revisions.add(rev);
@@ -262,17 +283,17 @@ public class ArtifactoryClient {
 		});
 	}
 
-	public Revision latestFileMatching(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
+	public Revision latestChildMatching(String url, String patternStr, boolean directory, HttpClient client) throws ClientProtocolException, IOException {
 		if (patternStr == null || patternStr.isEmpty()) {
 			return null;
 		}
 
 		Revision latest = null;
 		Pattern pattern = Pattern.compile(patternStr);
-		List<Revision> files = files(url, client);
-		for (Revision rev : files) {
-			String filename = rev.revision;
-			Matcher matcher = pattern.matcher(filename);
+		List<Revision> children = children(url, directory, client);
+		for (Revision rev : children) {
+			String name = rev.revision;
+			Matcher matcher = pattern.matcher(name);
 			if (!matcher.matches()) {
 				continue;
 			}

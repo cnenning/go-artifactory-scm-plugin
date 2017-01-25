@@ -879,4 +879,101 @@ public class IntegrationTests {
 
 		Assert.assertFalse(response.responseBody().contains("foo##1.2.3.txt"));
 	}
+
+	@Test
+	public void pkgCheckPkgConnection_directory() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \".*\""
+					+ "},"
+					+ "\"isDir\": {"
+					+ "\"value\": \"1\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("check-package-connection", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+	}
+
+	@Test
+	public void pkgLatestRevision_directory() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \".*\""
+					+ "},"
+					+ "\"isDir\": {"
+					+ "\"value\": \"true\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T14:15:00.000Z\""));
+
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"FILENAME_ENCODED\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION\":\"" + APP_URL + "1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"LOCATION_ENCODED\":\"" + APP_URL + "1.2.3\""));
+
+		Assert.assertFalse(response.responseBody().contains("0.9.5"));
+	}
+
+	@Test
+	public void pkgLatestRevisionSince_directory() throws Exception {
+		String requestJson =
+				"{\"repository-configuration\": {"
+						+ "\"base_url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "}"
+				+ "}, \"package-configuration\": {"
+					+ "\"path\": {"
+					+ "\"value\": \"\""
+					+ "},"
+					+ "\"pattern\": {"
+					+ "\"value\": \".*\""
+					+ "},"
+					+ "\"isDir\": {"
+					+ "\"value\": \"TRUE\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision-since", requestJson);
+
+		ArtifactoryPkgPlugin plugin = createPluginPkg();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"1.2.3\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-03T14:15:00.000Z\""));
+
+		Assert.assertFalse(response.responseBody().contains("0.9.5"));
+	}
 }
