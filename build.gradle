@@ -23,6 +23,7 @@ dependencies {
 	compile 'org.apache.httpcomponents:httpclient:4.5.2'
 	compile 'com.fasterxml.jackson.core:jackson-databind:2.8.3'
 	compile 'org.jsoup:jsoup:1.9.2'
+	compile 'joda-time:joda-time:2.9.7'
 
 	testCompile 'junit:junit:4.12'
 	testCompile 'org.apache.cxf:cxf-rt-frontend-jaxrs:3.1.6'

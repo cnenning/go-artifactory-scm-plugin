@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,6 +23,8 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.util.EntityUtils;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -335,14 +335,15 @@ public class ArtifactoryClient {
 		return null;
 	}
 
-	public static final DateFormat HTML_DATE_FORMAT = new SimpleDateFormat("dd-MMM-yyyy HH:mm");
+	public static final String HTML_DATE_FORMAT_STR = "dd-MMM-yyyy HH:mm";
+	public static final DateTimeFormatter HTML_DATE_FORMATTER = DateTimeFormat.forPattern(HTML_DATE_FORMAT_STR);
 
 	protected Date findDateInText(String text, String url) {
 		if (text != null) {
 			text = text.trim();
-			// note: text contains more than just date which is OK for this java api
 			try {
-				return HTML_DATE_FORMAT.parse(text);
+				text = text.substring(0, HTML_DATE_FORMAT_STR.length());
+				return HTML_DATE_FORMATTER.parseDateTime(text).toDate();
 			} catch (Exception e) {
 				logger.warn("could not parse date: '" + text + "', url: " + url);
 				logger.debug(e.getMessage(), e);

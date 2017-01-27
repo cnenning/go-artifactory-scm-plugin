@@ -27,6 +27,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.config.RequestConfig.Builder;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,6 +56,7 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 	public static final String REQUEST_SETTINGS_GET_THEM = "go.processor.plugin-settings.get";
 
 	public static final DateFormat GO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+	public static final DateTimeFormatter GO_DATE_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
 	private static final int DEFAULT_TIMEOUT = 240;
 
@@ -368,10 +371,16 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 				: null;
 	}
 
-	protected Date dateFromApiInput(Map input) throws ParseException {
+	protected Date dateFromApiInput(Map input) {
 		Map keysMap = (Map)input.get("previous-revision");
 		String timestamp = (String) keysMap.get("timestamp");
-		return GO_DATE_FORMAT.parse(timestamp);
+		try {
+			return GO_DATE_FORMATTER.parseDateTime(timestamp).toDate();
+		} catch (Exception e) {
+			logger.warn("could not parse date: '" + timestamp + "', json map: " + keysMap);
+			logger.debug(e.getMessage(), e);
+		}
+		return new Date(0);
 	}
 
 	protected String targetDirFromApiInput(Map input) {

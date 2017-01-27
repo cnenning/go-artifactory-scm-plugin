@@ -142,7 +142,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		return map;
 	}
 
-	private Map<String, Object> handleLatestRevisionsSince(String inputJson) throws JsonParseException, JsonMappingException, IOException, ParseException {
+	private Map<String, Object> handleLatestRevisionsSince(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(apiInput, "url");
 		Date since = dateFromApiInput(apiInput);
