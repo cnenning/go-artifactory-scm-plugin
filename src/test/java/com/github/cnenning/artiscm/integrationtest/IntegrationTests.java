@@ -536,6 +536,43 @@ public class IntegrationTests {
 		assertFileContent(new File(TMP_DIR, files[1]), "foobar foobar");
 	}
 
+	@Test
+	public void checkoutVersionOnly() throws Exception {
+		Assert.assertEquals(0, TMP_DIR.list().length);
+
+		String requestJson =
+				"{\"scm-configuration\": {"
+					+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+					+ "},"
+					+ "\"version_only\": {"
+						+ "\"value\": \"on\""
+					+ "}"
+				+ "},"
+				+ "\"destination-folder\": \"" + escapePath(TMP_DIR.getAbsolutePath()) + "\","
+				+ "\"revision\": {"
+					+ "\"revision\": \"1.2.3\""
+				+ "}"
+			+ "}"
+		;
+		GoPluginApiRequest request = createRequest("checkout", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		System.out.println("got response body:");
+		System.out.println(response.responseBody());
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+
+		String[] files = TMP_DIR.list();
+		Arrays.sort(files);
+		Assert.assertEquals(1, files.length);
+		Assert.assertEquals("version.txt", files[0]);
+
+		assertFileContent(new File(TMP_DIR, files[0]), "1.2.3");
+	}
+
 	private void assertFileContent(File file, String content) throws IOException {
 		try (InputStream fileInput = new FileInputStream(file)){
 			List<String> lines = IOUtils.readLines(fileInput, "UTF-8");

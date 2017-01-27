@@ -38,14 +38,7 @@ public class ArtifactoryClient {
 
 	protected Logger logger = Logger.getLoggerFor(getClass());
 
-	public void downloadFiles(String url, HttpClient client, String targetDirPath, String patternStr) throws ClientProtocolException, IOException {
-		// create target dir
-		File targetDir = new File(targetDirPath);
-		if (!targetDir.exists()) {
-			logger.info("creating target dir: " + targetDirPath);
-			targetDir.mkdirs();
-		}
-
+	public void downloadFiles(String url, HttpClient client, File targetDir, String patternStr) throws ClientProtocolException, IOException {
 		// add trailing slash
 		if (!url.endsWith("/")) {
 			url += "/";

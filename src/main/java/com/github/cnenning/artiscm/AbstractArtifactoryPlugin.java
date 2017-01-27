@@ -364,11 +364,16 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 	}
 
 	protected String configValue(Map config, String apiKey, String key) {
-		Map keysMap = (Map)config.get(apiKey);
-		Map innerMap = (Map)keysMap.get(key);
-		return innerMap != null
-				? (String)innerMap.get("value")
-				: null;
+		if (config != null) {
+			Map keysMap = (Map)config.get(apiKey);
+			if (keysMap != null) {
+				Map innerMap = (Map)keysMap.get(key);
+				if (innerMap != null) {
+					return (String)innerMap.get("value");
+				}
+			}
+		}
+		return null;
 	}
 
 	protected Date dateFromApiInput(Map input) {

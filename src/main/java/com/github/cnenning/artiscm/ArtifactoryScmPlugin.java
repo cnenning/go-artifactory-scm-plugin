@@ -1,8 +1,11 @@
 package com.github.cnenning.artiscm;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -91,6 +94,13 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		map.put("part-of-identity", Boolean.TRUE);
 		wrapper.put("dummy_id", map);
 
+		// version only
+		map = new HashMap<>();
+		map.put("display-name", "version.txt only");
+		map.put("default-value", "false");
+		map.put("part-of-identity", Boolean.FALSE);
+		wrapper.put("version_only", map);
+
 		return wrapper;
 	}
 
@@ -163,13 +173,31 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(apiInput, "url");
 		String pattern = configValue(apiInput, "pattern");
-		String targetDir = targetDirFromApiInput(apiInput);
+		String targetDirPath = targetDirFromApiInput(apiInput);
 		String rev = revisonFromApiInput(apiInput);
-		logger.debug("checking out, rev: '" + rev + "' from: " + url);
+		boolean versionOnly = versionOnly(apiInput);
 
-		url = url + rev;
-		new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
+		// create target dir
+		File targetDir = new File(targetDirPath);
+		if (!targetDir.exists()) {
+			logger.info("creating target dir: " + targetDirPath);
+			targetDir.mkdirs();
+		}
 
+		// do checkout
+		if (!versionOnly) {
+			logger.debug("checking out, rev: '" + rev + "' from: " + url + ", pattern: " + pattern);
+
+			url = url + rev;
+			new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
+		} else {
+			logger.debug("creating version file, rev: '" + rev + "' in: " + targetDir);
+
+			File versionFile = new File(targetDir, "version.txt");
+			try(PrintWriter writer = new PrintWriter(new FileOutputStream(versionFile))) {
+				writer.println(rev);
+			}
+		}
 		Map<String, Object> map = new HashMap<>();
 		map.put("status", "success");
 		map.put("messages", Arrays.asList("Successfully checked out"));
@@ -178,5 +206,12 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 
 	protected String configValue(Map config, String key) {
 		return configValue(config, "scm-configuration", key);
+	}
+
+	protected boolean versionOnly(Map config) {
+		// json looks like this:
+		// "version_only":{"value":"on"}
+		String str = configValue(config, "version_only");
+		return "on".equals(str);
 	}
 }
