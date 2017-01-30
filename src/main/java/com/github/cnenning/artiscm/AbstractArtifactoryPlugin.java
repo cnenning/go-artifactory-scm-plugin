@@ -465,4 +465,8 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		map.put("messages", messages);
 		return map;
 	}
+
+	boolean isTrue(String value) {
+		return "true".equals(value) || "TRUE".equals(value) || "1".equals(value) || "on".equals(value);
+	}
 }

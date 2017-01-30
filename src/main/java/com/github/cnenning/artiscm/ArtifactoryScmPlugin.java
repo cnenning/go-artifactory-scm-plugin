@@ -219,9 +219,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 	}
 
 	protected boolean versionOnly(Map config) {
-		// json looks like this:
-		// "version_only":{"value":"on"}
 		String str = configValue(config, "version_only");
-		return "on".equals(str);
+		return isTrue(str);
 	}
 }

@@ -222,7 +222,7 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 
 	protected boolean isDirectory(Map config) {
 		String isDirStr = configValuePkg(config, "isDir");
-		return "true".equals(isDirStr) || "TRUE".equals(isDirStr) || "1".equals(isDirStr);
+		return isTrue(isDirStr);
 	}
 
 	protected String prevRevisonTimestampFromApiInput(Map input) {
