@@ -167,7 +167,7 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		boolean isDirectory = isDirectory(config);
 		logger.debug("obtaining latest revision of: " + url);
 		ArtifactoryClient artifactoryClient = new ArtifactoryClient();
-		Revision revision = artifactoryClient.latestChildMatching(url, pattern, isDirectory, httpClient);
+		Revision revision = artifactoryClient.latestChild(url, pattern, isDirectory, httpClient);
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
 
 		Map<String, String> dataMap = new HashMap<>();

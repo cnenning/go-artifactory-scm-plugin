@@ -89,18 +89,12 @@ public class ArtifactoryClient {
 	}
 
 	public String checkSubDirs(final String url, final String pattern, final HttpClient client) throws ClientProtocolException, IOException {
-		String dirName = downloadHtml(url, client, new Callback<String>() {
-			@Override
-			public String callback(String url, HttpClient client, Document document)
-			{
-				return containsSubDir(document, pattern);
-			}
-		});
-		return dirName;
+		Revision latest = latestChild(url, pattern, true, client);
+		return latest != null ? latest.revision : null;
 	}
 
 	public String checkFiles(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
-		Revision latest = latestChildMatching(url, patternStr, false, client);
+		Revision latest = latestChild(url, patternStr, false, client);
 		return latest != null ? latest.revision : null;
 	}
 
@@ -165,31 +159,6 @@ public class ArtifactoryClient {
 			}
 		}
 		return false;
-	}
-
-	protected String containsSubDir(Document document, String patternStr) {
-		Pattern pattern = null;
-		if (patternStr != null && !patternStr.isEmpty()) {
-			pattern = Pattern.compile(patternStr);
-		}
-		Elements links = document.select("a");
-		for (Element link : links) {
-			String href = link.attr("href");
-			if (isDir(href) && dirMatchesPattern(href, pattern)) {
-				return href;
-			}
-		}
-		return null;
-	}
-
-	protected boolean dirMatchesPattern(String dir, Pattern pattern) {
-		if (pattern != null) {
-			if (dir.endsWith("/")) {
-				dir = dir.substring(0, dir.length() - 1);
-			}
-			return pattern.matcher(dir).matches();
-		}
-		return true;
 	}
 
 	public Revision latestRevision(final String url, final HttpClient client) throws ClientProtocolException, IOException {
@@ -276,29 +245,34 @@ public class ArtifactoryClient {
 		});
 	}
 
-	public Revision latestChildMatching(String url, String patternStr, boolean directory, HttpClient client) throws ClientProtocolException, IOException {
-		if (patternStr == null || patternStr.isEmpty()) {
-			return null;
+	public Revision latestChild(String url, String patternStr, boolean directory, HttpClient client) throws ClientProtocolException, IOException {
+		Pattern pattern = null;
+		if (patternStr != null && !patternStr.isEmpty()) {
+			pattern = Pattern.compile(patternStr);
 		}
 
 		Revision latest = null;
-		Pattern pattern = Pattern.compile(patternStr);
 		List<Revision> children = children(url, directory, client);
 		for (Revision rev : children) {
 			String name = rev.revision;
-			Matcher matcher = pattern.matcher(name);
-			if (!matcher.matches()) {
-				continue;
+			Matcher matcher = null;
+			if (pattern != null) {
+				matcher = pattern.matcher(name);
+				if (!matcher.matches()) {
+					continue;
+				}
 			}
 			if (latest == null || latest.timestamp.compareTo(rev.timestamp) < 0) {
 				latest = rev;
-				int groupCount = matcher.groupCount();
-				List<String> groups = new ArrayList<>(groupCount);
-				for (int i=0; i<groupCount; i++) {
-					String group = matcher.group(i);
-					groups.add(group);
+				if (matcher != null) {
+					int groupCount = matcher.groupCount();
+					List<String> groups = new ArrayList<>(groupCount);
+					for (int i=0; i<groupCount; i++) {
+						String group = matcher.group(i);
+						groups.add(group);
+					}
+					latest.matchingGroups = groups;
 				}
-				latest.matchingGroups = groups;
 			}
 		}
 		return latest;
