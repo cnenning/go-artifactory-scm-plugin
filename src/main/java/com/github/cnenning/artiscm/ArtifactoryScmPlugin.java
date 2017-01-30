@@ -169,38 +169,48 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		return map;
 	}
 
-	private Map<String, Object> handleCheckout(String inputJson) throws JsonParseException, JsonMappingException, IOException {
-		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
-		String url = configValue(apiInput, "url");
-		String pattern = configValue(apiInput, "pattern");
-		String targetDirPath = targetDirFromApiInput(apiInput);
-		String rev = revisonFromApiInput(apiInput);
-		boolean versionOnly = versionOnly(apiInput);
+	private Map<String, Object> handleCheckout(String inputJson) {
+		String status;
+		String msg;
+		try {
+			Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
+			String url = configValue(apiInput, "url");
+			String pattern = configValue(apiInput, "pattern");
+			String targetDirPath = targetDirFromApiInput(apiInput);
+			String rev = revisonFromApiInput(apiInput);
+			boolean versionOnly = versionOnly(apiInput);
 
-		// create target dir
-		File targetDir = new File(targetDirPath);
-		if (!targetDir.exists()) {
-			logger.info("creating target dir: " + targetDirPath);
-			targetDir.mkdirs();
-		}
-
-		// do checkout
-		if (!versionOnly) {
-			logger.debug("checking out, rev: '" + rev + "' from: " + url + ", pattern: " + pattern);
-
-			url = url + rev;
-			new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
-		} else {
-			logger.debug("creating version file, rev: '" + rev + "' in: " + targetDir);
-
-			File versionFile = new File(targetDir, "version.txt");
-			try(PrintWriter writer = new PrintWriter(new FileOutputStream(versionFile))) {
-				writer.println(rev);
+			// create target dir
+			File targetDir = new File(targetDirPath);
+			if (!targetDir.exists()) {
+				logger.info("creating target dir: " + targetDirPath);
+				targetDir.mkdirs();
 			}
+
+			// do checkout
+			if (!versionOnly) {
+				logger.debug("checking out, rev: '" + rev + "' from: " + url + ", pattern: " + pattern);
+
+				url = url + rev;
+				new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
+			} else {
+				logger.debug("creating version file, rev: '" + rev + "' in: " + targetDir);
+
+				File versionFile = new File(targetDir, "version.txt");
+				try(PrintWriter writer = new PrintWriter(new FileOutputStream(versionFile))) {
+					writer.println(rev);
+				}
+			}
+			status = "success";
+			msg = "Successfully checked out";
+		} catch (Exception e) {
+			status = "failure";
+			msg = e.toString();
+			logger.error("could not checkout", e);
 		}
 		Map<String, Object> map = new HashMap<>();
-		map.put("status", "success");
-		map.put("messages", Arrays.asList("Successfully checked out"));
+		map.put("status", status);
+		map.put("messages", Arrays.asList(msg));
 		return map;
 	}
 
