@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -496,7 +497,8 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		return map;
 	}
 
-	boolean isTrue(String value) {
-		return "true".equals(value) || "TRUE".equals(value) || "1".equals(value) || "on".equals(value);
+	protected boolean isTrue(String value) {
+		value = value != null ? value.toLowerCase(Locale.ENGLISH) : null;
+		return "true".equals(value) || "1".equals(value) || "on".equals(value) || "yes".equals(value);
 	}
 }
