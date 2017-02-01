@@ -501,6 +501,87 @@ public class IntegrationTests {
 	}
 
 	@Test
+	public void checkScmConnection_versionRegex() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"version_regex\": {"
+						+ "\"value\": \"0.*\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("check-scm-connection", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+		Assert.assertTrue(response.responseBody().contains("found directory 0.9.5"));
+	}
+
+	@Test
+	public void latestRevision_versionRegex() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"version_regex\": {"
+						+ "\"value\": \"0.*\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":{"));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"0.9.5\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"0.9.5\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-02T11:45:00.000Z\""));
+
+		Assert.assertFalse(response.responseBody().contains("0.5.1"));
+		Assert.assertFalse(response.responseBody().contains("revision\":\"1.2.3"));
+	}
+
+	@Test
+	public void latestRevisionsSince_versionRegex() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"version_regex\": {"
+						+ "\"value\": \"0.*\""
+						+ "}"
+				+ "},"
+				+ "\"previous-revision\": {"
+					+ "\"timestamp\": \"2016-01-02T08:00:00.000Z\""
+				+ "}"
+			+ "}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revisions-since", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revisions\":["));
+
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"0.9.5\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":\"0.9.5\""));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"2016-01-02T11:45:00.000Z\""));
+
+		Assert.assertFalse(response.responseBody().contains("revision\":\"1.2.3"));
+		Assert.assertFalse(response.responseBody().contains("0.5.1"));
+	}
+
+	@Test
 	public void checkout() throws Exception {
 		Assert.assertEquals(0, TMP_DIR.list().length);
 

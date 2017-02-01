@@ -161,38 +161,47 @@ public class ArtifactoryClient {
 		return false;
 	}
 
-	public Revision latestRevision(final String url, final HttpClient client) throws ClientProtocolException, IOException {
+	public Revision latestRevision(final String url, final String versionRegex, final HttpClient client) throws ClientProtocolException, IOException {
 		return downloadHtml(url, client, new Callback<Revision>(){
 			@Override
 			public Revision callback(String url, HttpClient client, Document document) throws IOException
 			{
-				List<Revision> revisions = revisions(url, client, document, null);
+				List<Revision> revisions = revisions(url, versionRegex, client, document, null);
 				return !revisions.isEmpty() ? revisions.get(0) : null;
 			}
 		});
 	}
 
-	public List<Revision> latestRevisionsSince(final String url, final HttpClient client, final Date since) throws ClientProtocolException, IOException {
+	public List<Revision> latestRevisionsSince(final String url, final String versionRegex, final HttpClient client, final Date since) throws ClientProtocolException, IOException {
 		return downloadHtml(url, client, new Callback<List<Revision>>(){
 			@Override
 			public List<Revision> callback(String url, HttpClient client, Document document) throws IOException
 			{
-				return revisions(url, client, document, since);
+				return revisions(url, versionRegex, client, document, since);
 			}
 		});
 	}
 
-	protected List<Revision> revisions(String url, HttpClient client, Document document, Date since) throws ClientProtocolException, IOException {
+	protected List<Revision> revisions(String url, String versionRegex, HttpClient client, Document document, Date since) throws ClientProtocolException, IOException {
 		List<Revision> revisions = new ArrayList<>();
 		Elements links = document.select("a");
+		Pattern pattern = versionRegex != null
+			? Pattern.compile(versionRegex)
+			: null;
 		for (Element link : links) {
 			String href = link.attr("href");
 			if (isDir(href)) {
-				Revision rev = elementToRev(link, since, url);
-				if (rev != null) {
-					revisions.add(rev);
-					if (since != null) {
-						filesForRev(url, client, rev);
+				boolean matches = true;
+				if (pattern != null) {
+					matches = pattern.matcher(href).matches();
+				}
+				if (matches) {
+					Revision rev = elementToRev(link, since, url);
+					if (rev != null) {
+						revisions.add(rev);
+						if (since != null) {
+							filesForRev(url, client, rev);
+						}
 					}
 				}
 			}

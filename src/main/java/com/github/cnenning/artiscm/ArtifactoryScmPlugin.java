@@ -80,12 +80,19 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		Map<String, Object> wrapper = new HashMap<>();
 		wrapper.put("url", map);
 
-		// pattern
+		// filename pattern
 		map = new HashMap<>();
 		map.put("display-name", "filename regex");
 		map.put("default-value", "");
 		map.put("part-of-identity", Boolean.TRUE);
 		wrapper.put("pattern", map);
+
+		// version pattern
+		map = new HashMap<>();
+		map.put("display-name", "version regex");
+		map.put("default-value", "");
+		map.put("part-of-identity", Boolean.TRUE);
+		wrapper.put("version_regex", map);
 
 		// dummy id
 		map = new HashMap<>();
@@ -137,14 +144,16 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 	private Map<String, Object> handleCheckScmConnection(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(config, "url");
-		return checkConnection(url, null);
+		String versionRegex = configValue(config, "version_regex");
+		return checkConnection(url, versionRegex);
 	}
 
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(config, "url");
-		logger.debug("obtaining latest revision of: " + url);
-		Revision revision = new ArtifactoryClient().latestRevision(url, httpClient);
+		String versionRegex = configValue(config, "version_regex");
+		logger.debug("obtaining latest revision of: " + url + ", with regex: " + versionRegex);
+		Revision revision = new ArtifactoryClient().latestRevision(url, versionRegex, httpClient);
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
 
 		Map<String, Object> map = new HashMap<>();
@@ -155,9 +164,10 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 	private Map<String, Object> handleLatestRevisionsSince(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map apiInput = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(apiInput, "url");
+		String versionRegex = configValue(apiInput, "version_regex");
 		Date since = dateFromApiInput(apiInput);
-		logger.debug("obtaining latest revisions since '" + since + "' of: " + url);
-		List<Revision> revisions = new ArtifactoryClient().latestRevisionsSince(url, httpClient, since);
+		logger.debug("obtaining latest revisions since '" + since + "' of: " + url + ", with regex: " + versionRegex);
+		List<Revision> revisions = new ArtifactoryClient().latestRevisionsSince(url, versionRegex, httpClient, since);
 
 		List<Map<String, Object>> revJsonList = new ArrayList<>(revisions.size());
 		for (Revision revision : revisions) {
