@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -38,7 +39,7 @@ public class ArtifactoryClient {
 
 	protected Logger logger = Logger.getLoggerFor(getClass());
 
-	public void downloadFiles(String url, HttpClient client, File targetDir, String patternStr) throws ClientProtocolException, IOException {
+	public void downloadFiles(String url, HttpClient client, UserPw userPw, File targetDir, String patternStr) throws ClientProtocolException, IOException {
 		// add trailing slash
 		if (!url.endsWith("/")) {
 			url += "/";
@@ -49,7 +50,7 @@ public class ArtifactoryClient {
 			pattern = Pattern.compile(patternStr);
 		}
 
-		List<Revision> files = files(url, client);
+		List<Revision> files = files(url, client, userPw);
 		for (Revision rev : files) {
 			String filename = rev.revision;
 			if (pattern != null) {
@@ -65,6 +66,7 @@ public class ArtifactoryClient {
 			logger.info("downloading " + completeUrl);
 
 			HttpGet httpget = new HttpGet(completeUrl);
+			configureMethod(httpget, userPw);
 			HttpResponse response = client.execute(httpget);
 			try {
 				InputStream contentStream = response.getEntity().getContent();
@@ -72,6 +74,19 @@ public class ArtifactoryClient {
 				IOUtils.copy(contentStream, outStream);
 			} finally {
 				EntityUtils.consumeQuietly(response.getEntity());
+			}
+		}
+	}
+
+	protected void configureMethod(HttpGet httpget, UserPw userPw) {
+		if (userPw != null && userPw.username != null && userPw.password != null) {
+			String basicAuthVal = userPw.username + ":" + userPw.password;
+			try {
+				byte[] encoded = new Base64().encode(basicAuthVal.getBytes("UTF-8"));
+				basicAuthVal = new String(encoded, "UTF-8");
+				httpget.addHeader("Authorization", "Basic " + basicAuthVal);
+			} catch (UnsupportedEncodingException e) {
+				logger.error("no utf-8", e);
 			}
 		}
 	}
@@ -88,23 +103,24 @@ public class ArtifactoryClient {
 		}
 	}
 
-	public String checkSubDirs(final String url, final String pattern, final HttpClient client) throws ClientProtocolException, IOException {
-		Revision latest = latestChild(url, pattern, true, client);
+	public String checkSubDirs(final String url, final String pattern, final HttpClient client, UserPw userPw) throws ClientProtocolException, IOException {
+		Revision latest = latestChild(url, pattern, true, client, userPw);
 		return latest != null ? latest.revision : null;
 	}
 
-	public String checkFiles(String url, String patternStr, HttpClient client) throws ClientProtocolException, IOException {
-		Revision latest = latestChild(url, patternStr, false, client);
+	public String checkFiles(String url, String patternStr, HttpClient client, UserPw userPw) throws ClientProtocolException, IOException {
+		Revision latest = latestChild(url, patternStr, false, client, userPw);
 		return latest != null ? latest.revision : null;
 	}
 
-	protected <T> T downloadHtml(String url, HttpClient client, Callback<T> callback) throws ClientProtocolException, IOException {
+	protected <T> T downloadHtml(String url, HttpClient client, UserPw userPw, Callback<T> callback) throws ClientProtocolException, IOException {
 		// add trailing slash
 		if (!url.endsWith("/")) {
 			url += "/";
 		}
 
 		HttpGet httpget = new HttpGet(url);
+		configureMethod(httpget, userPw);
 		HttpResponse response = client.execute(httpget);
 		try {
 			int statusCode = response.getStatusLine().getStatusCode();
@@ -161,28 +177,31 @@ public class ArtifactoryClient {
 		return false;
 	}
 
-	public Revision latestRevision(final String url, final String versionRegex, final HttpClient client) throws ClientProtocolException, IOException {
-		return downloadHtml(url, client, new Callback<Revision>(){
+	public Revision latestRevision(final String url, final String versionRegex, final HttpClient client, final UserPw userPw)
+			throws ClientProtocolException, IOException {
+		return downloadHtml(url, client, userPw, new Callback<Revision>(){
 			@Override
 			public Revision callback(String url, HttpClient client, Document document) throws IOException
 			{
-				List<Revision> revisions = revisions(url, versionRegex, client, document, null);
+				List<Revision> revisions = revisions(url, versionRegex, client, userPw, document, null);
 				return !revisions.isEmpty() ? revisions.get(0) : null;
 			}
 		});
 	}
 
-	public List<Revision> latestRevisionsSince(final String url, final String versionRegex, final HttpClient client, final Date since) throws ClientProtocolException, IOException {
-		return downloadHtml(url, client, new Callback<List<Revision>>(){
+	public List<Revision> latestRevisionsSince(final String url, final String versionRegex, final HttpClient client, final UserPw userPw, final Date since)
+			throws ClientProtocolException, IOException {
+		return downloadHtml(url, client, userPw, new Callback<List<Revision>>(){
 			@Override
 			public List<Revision> callback(String url, HttpClient client, Document document) throws IOException
 			{
-				return revisions(url, versionRegex, client, document, since);
+				return revisions(url, versionRegex, client, userPw, document, since);
 			}
 		});
 	}
 
-	protected List<Revision> revisions(String url, String versionRegex, HttpClient client, Document document, Date since) throws ClientProtocolException, IOException {
+	protected List<Revision> revisions(String url, String versionRegex, HttpClient client, UserPw userPw, Document document, Date since)
+			throws ClientProtocolException, IOException {
 		List<Revision> revisions = new ArrayList<>();
 		Elements links = document.select("a");
 		Pattern pattern = versionRegex != null
@@ -200,7 +219,7 @@ public class ArtifactoryClient {
 					if (rev != null) {
 						revisions.add(rev);
 						if (since != null) {
-							filesForRev(url, client, rev);
+							filesForRev(url, client, userPw, rev);
 						}
 					}
 				}
@@ -209,16 +228,16 @@ public class ArtifactoryClient {
 		if (since == null && !revisions.isEmpty()) {
 			// assume revisions are ordered by date
 			Revision lastRev = revisions.get(revisions.size() - 1);
-			filesForRev(url, client, lastRev);
+			filesForRev(url, client, userPw, lastRev);
 			revisions = Arrays.asList(lastRev);
 		}
 		return revisions;
 	}
 
-	protected void filesForRev(String url, HttpClient client, Revision rev) throws ClientProtocolException, IOException
+	protected void filesForRev(String url, HttpClient client, UserPw userPw, Revision rev) throws ClientProtocolException, IOException
 	{
 		String revUrl = url + rev.revision;
-		List<Revision> fileRevs = files(revUrl, client);
+		List<Revision> fileRevs = files(revUrl, client, userPw);
 		List<String> files = new ArrayList<>(fileRevs.size());
 		for (Revision fileRev : fileRevs) {
 			files.add(fileRev.revision);
@@ -226,12 +245,13 @@ public class ArtifactoryClient {
 		rev.files = files;
 	}
 
-	protected List<Revision> files(String url, HttpClient client) throws ClientProtocolException, IOException {
-		return children(url, false, client);
+	protected List<Revision> files(String url, HttpClient client, UserPw userPw) throws ClientProtocolException, IOException {
+		return children(url, false, client, userPw);
 	}
 
-	protected List<Revision> children(final String url, final boolean directories, final HttpClient client) throws ClientProtocolException, IOException {
-		return downloadHtml(url, client, new Callback<List<Revision>>() {
+	protected List<Revision> children(final String url, final boolean directories, final HttpClient client, final UserPw userPw)
+			throws ClientProtocolException, IOException {
+		return downloadHtml(url, client, userPw, new Callback<List<Revision>>() {
 			@Override
 			public List<Revision> callback(String url, HttpClient client, Document document)
 			{
@@ -254,14 +274,15 @@ public class ArtifactoryClient {
 		});
 	}
 
-	public Revision latestChild(String url, String patternStr, boolean directory, HttpClient client) throws ClientProtocolException, IOException {
+	public Revision latestChild(String url, String patternStr, boolean directory, HttpClient client, UserPw userPw)
+			throws ClientProtocolException, IOException {
 		Pattern pattern = null;
 		if (patternStr != null && !patternStr.isEmpty()) {
 			pattern = Pattern.compile(patternStr);
 		}
 
 		Revision latest = null;
-		List<Revision> children = children(url, directory, client);
+		List<Revision> children = children(url, directory, client, userPw);
 		for (Revision rev : children) {
 			String name = rev.revision;
 			Matcher matcher = null;

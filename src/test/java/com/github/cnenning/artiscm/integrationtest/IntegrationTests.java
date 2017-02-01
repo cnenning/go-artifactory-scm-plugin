@@ -1123,4 +1123,28 @@ public class IntegrationTests {
 
 		Assert.assertFalse(response.responseBody().contains("0.9.5"));
 	}
+
+	@Test
+	public void credentials_checkScmConnection() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "\""
+						+ "},"
+						+ "\"username\": {"
+						+ "\"value\": \"username\""
+						+ "},"
+						+ "\"password\": {"
+						+ "\"value\": \"password\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("check-scm-connection", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"status\":\"success\""));
+	}
 }

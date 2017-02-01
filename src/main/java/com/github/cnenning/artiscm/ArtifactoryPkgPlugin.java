@@ -75,6 +75,8 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		map.put("required", Boolean.TRUE);
 		wrapper.put("base_url", map);
 
+		addConfigUserAndPassword(wrapper);
+
 		return wrapper;
 	}
 
@@ -108,7 +110,29 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		map.put("required", Boolean.FALSE);
 		wrapper.put("isDir", map);
 
+		addConfigUserAndPassword(wrapper);
+
 		return wrapper;
+	}
+
+	private void addConfigUserAndPassword(Map<String, Object> wrapper) {
+		Map<String, Object> map = new HashMap<>();
+		map.put("display-name", "username");
+		map.put("default-value", "");
+		map.put("display-order", "3");
+		map.put("part-of-identity", Boolean.FALSE);
+		map.put("secure", Boolean.FALSE);
+		map.put("required", Boolean.FALSE);
+		wrapper.put("username", map);
+
+		map = new HashMap<>();
+		map.put("display-name", "password");
+		map.put("default-value", "");
+		map.put("display-order", "4");
+		map.put("part-of-identity", Boolean.FALSE);
+		map.put("secure", Boolean.TRUE);
+		map.put("required", Boolean.FALSE);
+		wrapper.put("password", map);
 	}
 
 	private List<Object> handleRepoValidation(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -146,7 +170,7 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 	private Map<String, Object> handleCheckRepoConnection(String inputJson) throws JsonParseException, JsonMappingException, IOException {
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValueRepo(config, "base_url");
-		return checkConnection(url, null);
+		return checkConnection(url, null, userPw(config));
 	}
 
 	private Map<String, Object> handleCheckPkgConnection(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -155,7 +179,7 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		String path = configValuePkg(config, "path");
 		String pattern = configValuePkg(config, "pattern");
 		boolean isDirectory = isDirectory(config);
-		return checkConnection(baseUrl + path, pattern, isDirectory);
+		return checkConnection(baseUrl + path, pattern, userPw(config), isDirectory);
 	}
 
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -167,7 +191,7 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		boolean isDirectory = isDirectory(config);
 		logger.debug("obtaining latest revision of: " + url);
 		ArtifactoryClient artifactoryClient = new ArtifactoryClient();
-		Revision revision = artifactoryClient.latestChild(url, pattern, isDirectory, httpClient);
+		Revision revision = artifactoryClient.latestChild(url, pattern, isDirectory, httpClient, userPw(config));
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
 
 		Map<String, String> dataMap = new HashMap<>();
@@ -230,5 +254,17 @@ public class ArtifactoryPkgPlugin extends AbstractArtifactoryPlugin {
 		return keysMap != null
 				? (String) keysMap.get("timestamp")
 				: "";
+	}
+
+	protected UserPw userPw(Map config) {
+		String username = configValuePkg(config, "username");
+		String password = configValuePkg(config, "password");
+		if (username == null) {
+			username = configValueRepo(config, "username");
+		}
+		if (password == null) {
+			password = configValueRepo(config, "password");
+		}
+		return new UserPw(username, password);
 	}
 }

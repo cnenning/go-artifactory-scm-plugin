@@ -18,3 +18,8 @@
 	<input type="text" ng-model="proxyUrl" />
 	<span class="form_error" ng-show="GOINPUTNAME[proxyUrl].$error.server">{{ GOINPUTNAME[proxyUrl].$error.server }}</span>
 </div>
+<div class="form_item_block" title="Number of connections kept to artifactory.">
+	<label>Connection Pool Size:</label>
+	<input type="text" ng-model="connPoolSize" />
+	<span class="form_error" ng-show="GOINPUTNAME[connPoolSize].$error.server">{{ GOINPUTNAME[connPoolSize].$error.server }}</span>
+</div>

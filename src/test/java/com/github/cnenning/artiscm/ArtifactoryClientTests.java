@@ -2,8 +2,10 @@ package com.github.cnenning.artiscm;
 
 import java.util.Date;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 import org.junit.Assert;
@@ -100,5 +102,14 @@ public class ArtifactoryClientTests {
 	public void findDateInTextInvalid() {
 		Date date = new ArtifactoryClient().findDateInText("invalid", "");
 		Assert.assertEquals(0, date.getTime());
+	}
+
+	@Test
+	public void addBasicAuth() {
+		HttpGet method = new HttpGet();
+		UserPw userPw = new UserPw("username", "password");
+		new ArtifactoryClient().configureMethod(method, userPw);
+		Header authHeader = method.getFirstHeader("Authorization");
+		Assert.assertEquals("Basic dXNlcm5hbWU6cGFzc3dvcmQ=", authHeader.getValue());
 	}
 }

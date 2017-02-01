@@ -94,6 +94,21 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		map.put("part-of-identity", Boolean.TRUE);
 		wrapper.put("version_regex", map);
 
+		// username
+		map = new HashMap<>();
+		map.put("display-name", "username");
+		map.put("default-value", "");
+		map.put("part-of-identity", Boolean.FALSE);
+		wrapper.put("username", map);
+
+		// password
+		map = new HashMap<>();
+		map.put("display-name", "password");
+		map.put("default-value", "");
+		map.put("part-of-identity", Boolean.FALSE);
+		map.put("secure", Boolean.TRUE);
+		wrapper.put("username", map);
+
 		// dummy id
 		map = new HashMap<>();
 		map.put("display-name", "dummy id");
@@ -145,7 +160,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		Map config = new ObjectMapper().readValue(inputJson, Map.class);
 		String url = configValue(config, "url");
 		String versionRegex = configValue(config, "version_regex");
-		return checkConnection(url, versionRegex);
+		return checkConnection(url, versionRegex, userPw(config));
 	}
 
 	private Map<String, Object> handleLatestRevision(String inputJson) throws JsonParseException, JsonMappingException, IOException {
@@ -153,7 +168,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		String url = configValue(config, "url");
 		String versionRegex = configValue(config, "version_regex");
 		logger.debug("obtaining latest revision of: " + url + ", with regex: " + versionRegex);
-		Revision revision = new ArtifactoryClient().latestRevision(url, versionRegex, httpClient);
+		Revision revision = new ArtifactoryClient().latestRevision(url, versionRegex, httpClient, userPw(config));
 		Map<String, Object> revisionJson = buildRevisionJson(revision);
 
 		Map<String, Object> map = new HashMap<>();
@@ -167,7 +182,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		String versionRegex = configValue(apiInput, "version_regex");
 		Date since = dateFromApiInput(apiInput);
 		logger.debug("obtaining latest revisions since '" + since + "' of: " + url + ", with regex: " + versionRegex);
-		List<Revision> revisions = new ArtifactoryClient().latestRevisionsSince(url, versionRegex, httpClient, since);
+		List<Revision> revisions = new ArtifactoryClient().latestRevisionsSince(url, versionRegex, httpClient, userPw(apiInput), since);
 
 		List<Map<String, Object>> revJsonList = new ArrayList<>(revisions.size());
 		for (Revision revision : revisions) {
@@ -202,7 +217,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 				logger.debug("checking out, rev: '" + rev + "' from: " + url + ", pattern: " + pattern);
 
 				url = url + rev;
-				new ArtifactoryClient().downloadFiles(url, httpClient, targetDir, pattern);
+				new ArtifactoryClient().downloadFiles(url, httpClient, userPw(apiInput), targetDir, pattern);
 			} else {
 				logger.debug("creating version file, rev: '" + rev + "' in: " + targetDir);
 
@@ -231,5 +246,9 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 	protected boolean versionOnly(Map config) {
 		String str = configValue(config, "version_only");
 		return isTrue(str);
+	}
+
+	protected UserPw userPw(Map config) {
+		return new UserPw(configValue(config, "username"), configValue(config, "password"));
 	}
 }

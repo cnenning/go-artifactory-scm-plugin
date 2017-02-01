@@ -5,6 +5,7 @@ import java.io.InputStream;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -18,7 +19,13 @@ public class ArtiTestJaxrsResource extends Application {
 	@Path("/app-name")
 	@Produces("*/*")
 	@Consumes("*/*")
-	public Response listVersions() {
+	public Response listVersions(@HeaderParam("Authorization") String auth) {
+		if (auth != null) {
+			System.out.println("got basic auth value: " + auth);
+			if (!auth.equals("Basic dXNlcm5hbWU6cGFzc3dvcmQ=")) {
+				return Response.status(401).build();
+			}
+		}
 		InputStream inputStream = getClass().getResourceAsStream("/versions.html");
 		return Response.ok(inputStream).build();
 	}
