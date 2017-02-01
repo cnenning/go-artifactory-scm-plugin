@@ -78,6 +78,7 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 
 	private HttpClient createHttpClient(String json) {
 		Builder requestConfigBuilder = RequestConfig.custom();
+		Integer connPoolSize = null;
 		try {
 			Map settings = json != null
 				? new ObjectMapper().readValue(json, Map.class)
@@ -100,6 +101,12 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 				logger.info("setting proxyUrl: " + proxyUrl);
 				requestConfigBuilder.setProxy(HttpHost.create(proxyUrl));
 			}
+
+			String connPoolSizeStr = (String)settings.get("connPoolSize");
+			if (connPoolSizeStr != null && !connPoolSizeStr.isEmpty()) {
+				connPoolSize = Integer.valueOf(connPoolSizeStr);
+				logger.info("setting ConnPoolSize: " + connPoolSize);
+			}
 		} catch (Exception e) {
 			logger.error("could not read plugin settings", e);
 		}
@@ -107,6 +114,9 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create();
 		clientBuilder.setUserAgent(buildUserAgent());
 		clientBuilder.setDefaultRequestConfig(requestConfigBuilder.build());
+		if (connPoolSize != null) {
+			clientBuilder.setMaxConnPerRoute(connPoolSize.intValue());
+		}
 		return clientBuilder.build();
 	}
 
@@ -230,6 +240,14 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 		map.put("secure", Boolean.FALSE);
 		wrapper.put("proxyUrl", map);
 
+		map = new HashMap<>();
+		map.put("display-name", "Connection Pool Size");
+		map.put("default-value", "");
+		map.put("display-order", "4");
+		map.put("required", Boolean.FALSE);
+		map.put("secure", Boolean.FALSE);
+		wrapper.put("connPoolSize", map);
+
 		return wrapper;
 	}
 
@@ -264,7 +282,19 @@ public abstract class AbstractArtifactoryPlugin implements GoPlugin {
 				error.put("key", "proxyUrl");
 				error.put("message", e.toString());
 				valiErrors.add(error);
-				
+			}
+		}
+
+		Map connPoolSize = (Map)config.get("connPoolSize");
+		if (connPoolSize != null) {
+			String connPoolSizeStr = (String)connPoolSize.get("value");
+			try {
+				Integer.valueOf(connPoolSizeStr);
+			} catch (Exception e) {
+				Map<String, String> error = new HashMap<>();
+				error.put("key", "connPoolSize");
+				error.put("message", "Must be an integer");
+				valiErrors.add(error);
 			}
 		}
 

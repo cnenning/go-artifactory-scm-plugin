@@ -132,7 +132,8 @@ public class IntegrationTests {
 						+ "\"connectTimeout\": \"1\","
 						+ "\"socketTimeout\": \"2\","
 						+ "\"connectionRequestTimeout\": \"3\","
-						+ "\"proxyUrl\": \"http://proxy.example.com:1234\""
+						+ "\"proxyUrl\": \"http://proxy.example.com:1234\","
+						+ "\"connPoolSize\": \"3\""
 						+ "}";
 				DefaultGoApiResponse response = new DefaultGoApiResponse(200);
 				response.setResponseBody(json);
@@ -159,6 +160,7 @@ public class IntegrationTests {
 		Map socketTimeoutMap = (Map) map.get("socketTimeout");
 		Map connectionRequestTimeoutMap = (Map) map.get("connectionRequestTimeout");
 		Map proxyUrlMap = (Map) map.get("proxyUrl");
+		Map connPoolSize = (Map) map.get("connPoolSize");
 
 		Assert.assertEquals("240", connectTimeoutMap.get("default-value"));
 		Assert.assertEquals("0", connectTimeoutMap.get("display-order"));
@@ -179,6 +181,11 @@ public class IntegrationTests {
 		Assert.assertEquals("3", proxyUrlMap.get("display-order"));
 		Assert.assertEquals(Boolean.FALSE, proxyUrlMap.get("required"));
 		Assert.assertEquals(Boolean.FALSE, proxyUrlMap.get("secure"));
+
+		Assert.assertEquals("", connPoolSize.get("default-value"));
+		Assert.assertEquals("4", connPoolSize.get("display-order"));
+		Assert.assertEquals(Boolean.FALSE, connPoolSize.get("required"));
+		Assert.assertEquals(Boolean.FALSE, connPoolSize.get("secure"));
 	}
 
 	@Test
@@ -190,6 +197,9 @@ public class IntegrationTests {
 					+ "}, "
 					+ "\"proxyUrl\": {"
 					+ "\"value\": \"http://proxy.example.com:1234\""
+					+ "},"
+					+ "\"connPoolSize\": {"
+					+ "\"value\": \"200\""
 					+ "}"
 				+ "}}"
 		;
@@ -203,7 +213,7 @@ public class IntegrationTests {
 	}
 
 	@Test
-	public void settingsValidationBadInteger() throws Exception {
+	public void settingsValidationBadTimeout() throws Exception {
 		String requestJson =
 				"{\"plugin-settings\": {"
 					+ "\"connectTimeout\": {"
@@ -239,6 +249,25 @@ public class IntegrationTests {
 		Assert.assertTrue(response.responseBody().contains("\"key\":\"proxyUrl\""));
 		Assert.assertTrue(response.responseBody().contains("\"message\":"));
 		Assert.assertTrue(response.responseBody().contains("Exception"));
+	}
+
+	@Test
+	public void settingsValidationBadConnPoolSize() throws Exception {
+		String requestJson =
+				"{\"plugin-settings\": {"
+					+ "\"connPoolSize\": {"
+					+ "\"value\": \"asdf\""
+					+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("go.plugin-settings.validate-configuration", requestJson);
+
+		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"key\":\"connPoolSize\""));
+		Assert.assertTrue(response.responseBody().contains("\"message\":\"Must be an integer\""));
 	}
 
 	@Test
