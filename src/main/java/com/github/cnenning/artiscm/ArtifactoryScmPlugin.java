@@ -107,7 +107,7 @@ public class ArtifactoryScmPlugin extends AbstractArtifactoryPlugin implements G
 		map.put("default-value", "");
 		map.put("part-of-identity", Boolean.FALSE);
 		map.put("secure", Boolean.TRUE);
-		wrapper.put("username", map);
+		wrapper.put("password", map);
 
 		// dummy id
 		map = new HashMap<>();
