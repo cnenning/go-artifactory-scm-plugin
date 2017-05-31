@@ -318,8 +318,12 @@ public class IntegrationTests {
 		ArtifactoryScmPlugin plugin = new ArtifactoryScmPlugin();
 		GoPluginApiResponse response = plugin.handle(request);
 
+		System.out.println("got response:");
+		System.out.println(response.responseBody());
+		System.out.println();
+
 		Assert.assertNotNull(response);
-		Assert.assertTrue(response.responseBody().contains("{\"template\":\"<div class"));
+		Assert.assertTrue(response.responseBody().contains("\"template\":\"<div class"));
 		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[url].$error.server"));
 		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[pattern].$error.server"));
 		Assert.assertTrue(response.responseBody().contains("GOINPUTNAME[dummy_id].$error.server"));
