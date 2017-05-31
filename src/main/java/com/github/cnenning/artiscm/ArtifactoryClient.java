@@ -184,7 +184,17 @@ public class ArtifactoryClient {
 			public Revision callback(String url, HttpClient client, Document document) throws IOException
 			{
 				List<Revision> revisions = revisions(url, versionRegex, client, userPw, document, null);
-				return !revisions.isEmpty() ? revisions.get(0) : null;
+				Revision rev = !revisions.isEmpty() ? revisions.get(0) : null;
+				if (rev == null) {
+					logger.info("Could not find revision!\nurl: " + url + "\nversion regex: " + versionRegex + "\nhtml: " + document.outerHtml());
+
+					// build empty/null rev to avoid NPE
+					rev = new Revision();
+					rev.revision = "bad data, check logs";
+					rev.timestamp = new Date(0);
+					rev.files = Collections.emptyList();
+				}
+				return rev;
 			}
 		});
 	}

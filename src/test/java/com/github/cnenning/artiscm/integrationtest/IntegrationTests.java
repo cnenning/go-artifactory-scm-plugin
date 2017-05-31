@@ -494,6 +494,32 @@ public class IntegrationTests {
 		Assert.assertFalse(response.responseBody().contains("0.9.5"));
 	}
 
+
+	@Test
+	public void latestRevisionBadHtml() throws Exception {
+		String requestJson =
+				"{\"scm-configuration\": {"
+						+ "\"url\": {"
+						+ "\"value\": \"" + APP_URL + "files.html\""
+						+ "}"
+				+ "}}"
+		;
+		GoPluginApiRequest request = createRequest("latest-revision", requestJson);
+
+		ArtifactoryScmPlugin plugin = createPluginScm();
+		GoPluginApiResponse response = plugin.handle(request);
+
+		System.out.println("got response:");
+		System.out.println(response.responseBody());
+		System.out.println();
+
+		Assert.assertNotNull(response);
+		Assert.assertTrue(response.responseBody().contains("\"revision\":{"));
+		Assert.assertTrue(response.responseBody().contains("\"revision\":\"bad data, check logs\""));
+		Assert.assertTrue(response.responseBody().contains("\"revisionComment\":null"));
+		Assert.assertTrue(response.responseBody().contains("\"timestamp\":\"1970-01-01T01:00:00.000Z\""));
+	}
+
 	@Test
 	public void latestRevisionsSince() throws Exception {
 		String requestJson =
