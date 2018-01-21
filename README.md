@@ -9,6 +9,10 @@ The SCM-Plugin treats a directory in [Artifactory](https://www.jfrog.com/artifac
 Place the [JAR file(s)](https://github.com/cnenning/go-artifactory-scm-plugin/releases) in directory `plugins/external` of your go-server. See [go documentation](https://docs.go.cd/current/extension_points/plugin_user_guide.html) for more details.
 
 
+## Plugin Configuration
+go shows a cogwheel next to each plugin in admin area. You can configure some global settings like timeouts or username/password there. Afterwards you have to restart go-server. You can check if your config is active by looking at logs. See [go docs for details](https://developer.gocd.org/current/writing_go_plugins/go_plugins_basics.html#logging).
+
+
 ## SCM Configuration
 Repositories in Artifactory should follow this pattern:
 
@@ -35,4 +39,3 @@ For pipeline materials you have to provide a path and filename regex to uniquely
 Package-Repository-Plugins cannot download files themselfs but provide variables to be used in custom scripts. This plugin provides filename and complete URL (location) of found artifact. Both 'as is' and with URL encoded filename.
 
 You may use groups in regex to extract version number. E.g. a filename `foo_1.2.3.ext` may be matched with regex `(foo_)(.*)(\.ext)`. Each group is provided as variable.
-
